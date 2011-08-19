@@ -164,13 +164,14 @@ def automateDis(model, numberOfImages=24, modelLength=None, pngcrush=False):
 			model.setBGColour(255, 255, 255, 255)
 			# Open HLMV
 			mouse.sleep(1)
-			try:
-				x = mouse.find({targetImagesDir + 'openhlmv.png': (0, 0)})
-			except:
-				try:
-					x = mouse.find({targetImagesDir + 'openhlmvunhighlighted.png': (0, 0)})
-				except:
-						x = mouse.find({targetImagesDir + 'openhlmvinactive.png': (0, 0)})
+			x = mouse.find({targetImagesDir + 'openhlmv.png': (0, 0)})
+			if x is None:
+				x = mouse.find({targetImagesDir + 'openhlmvunhighlighted.png': (0, 0)})
+			if x is None:
+				x = mouse.find({targetImagesDir + 'openhlmvinactive.png': (0, 0)})
+			if x is None:
+				print 'Couldn\'t find source SDK launcher to click on'
+				break
 			mouse.doubleclick(x)
 			# Maximise HLMV
 			mouse.sleep(2)

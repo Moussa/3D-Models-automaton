@@ -4,9 +4,9 @@ class HLMVModelRegistryKey:
 	""" class to wrap the registry entries for HLMV model registry keys
 	"""
 	def __init__(self, weaponKey):
-	""" Initial Parameters:
-                weaponkey -> key name for model located at HKEY_CURRENT_USER\Software\Valve\hlmv\
-	"""
+		""" Initial Parameters:
+					weaponkey -> key name for model located at HKEY_CURRENT_USER\Software\Valve\hlmv\
+		"""
 		try:
 			self.itemkey = _winreg.OpenKey(
 										   _winreg.HKEY_CURRENT_USER,
