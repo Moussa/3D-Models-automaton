@@ -7,6 +7,7 @@ except:
 
 targetDimension = 280
 targetSize = 512 * 1024 # 512 KB
+#targetSize = 768 * 1024
 
 def autocrop(img):
 	load = img.load()

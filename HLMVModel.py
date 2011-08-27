@@ -38,13 +38,13 @@ class HLMVModelRegistryKey:
 		value, type = _winreg.QueryValueEx(self.itemkey, 'Rot')
 		dataParser = re.compile(r'\(([-+]?[0-9]*\.?[0-9]+) ([-+]?[0-9]*\.?[0-9]+) ([-+]?[0-9]*\.?[0-9]+)\)')
 		values = dataParser.search(value)
-		return {'x': values.group(1), 'y': values.group(2), 'z': values.group(3)}
+		return {'x': float(values.group(1)), 'y': float(values.group(2)), 'z': float(values.group(3))}
 	
 	def returnTranslation(self):
 		value, type = _winreg.QueryValueEx(self.itemkey, 'Trans')
 		dataParser = re.compile(r'\(([-+]?[0-9]*\.?[0-9]+) ([-+]?[0-9]*\.?[0-9]+) ([-+]?[0-9]*\.?[0-9]+)\)')
 		values = dataParser.search(value)
-		return {'x': values.group(1), 'y': values.group(2), 'z': values.group(3)}
+		return {'x': float(values.group(1)), 'y': float(values.group(2)), 'z': float(values.group(3))}
 
 	def setRotation(self, x=None, y=None, z=None):
 		if x is None:
