@@ -83,7 +83,7 @@ def rotateAboutNewCentre(currentXPosition, currentYPosition, currentZPosition, r
 	newZ = float(currentZPosition) - (math.sin(xangle * degreesToRadiansFactor) * rotationOffset)
 	return [newX, newY, newZ]
 	
-def automateDis(model, numberOfImages=24, rotationOffset=None, newRotationPlane=False, initialRotation=None, initialTranslation=None):
+def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None):
 	""" Method to automize process of taking images for 3D model views. 
 	
 		Parameters:
@@ -91,25 +91,24 @@ def automateDis(model, numberOfImages=24, rotationOffset=None, newRotationPlane=
 				numberOfImages -> Number of images to take for one full rotation. Optional, will default to 24.
 				rotationOffset -> The distance from the default centre of rotation to the new one (in HLMV units). Optional.
 	"""
-	n = 0
 	if initialTranslation is None:
 		initialTranslation = [model.returnTranslation()['x'], model.returnTranslation()['y'], model.returnTranslation()['z']]
 	if initialRotation is None:
 		initialRotation = [model.returnRotation()['x'], model.returnRotation()['y'], model.returnRotation()['z']]
 	mouse.sleep(3)
 	
-	print 'initialTranslation', initialTranslation
-	print 'startingrotation', initialRotation
+	print 'initialTranslation =', initialTranslation
+	print 'initialRotation =', initialRotation
 	
-	for yrotation in range(-180, 180, 360/numberOfImages):
+	for yrotation in range((-180 + (360/24 * n)), 180, 360/numberOfImages):
 		print 'n =', str(n)
 		for xrotation in range(-15, 30, 15):
 			# Close HLMV
 			mouse.click(x=monitorResolution[0],y=0)
 			# Set rotation
 			mouse.sleep(2)
-			model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]))
-			print 'rotation =', xrotation, yrotation
+			model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]), z = initialRotation[2])
+			print 'xRot = %s, yRot = %s' % (xrotation, yrotation)
 			if rotationOffset is not None:
 				# Set translation to account for off centre rotation
 				result = rotateAboutNewCentre(initialTranslation[0], initialTranslation[1], initialTranslation[2], rotationOffset, yrotation, xrotation)
@@ -184,6 +183,5 @@ def automateDis(model, numberOfImages=24, rotationOffset=None, newRotationPlane=
 	print '\nAll done'
 
 # Poot values here
-model = HLMVModelRegistryKey('models.weapons.c_models.c_drg_cowmangler.c_drg_cowmangler.mdl')
-automateDis(model=model, rotationOffset=-6.0, initialRotation=(0.000000, 0.000000, 0.000000), initialTranslation=(107.666588, 0.000000, 2.793768))
-# n = 8 rot = -60
+model = HLMVModelRegistryKey('models.weapons.c_models.c_dex_shotgun.c_dex_shotgun.mdl')
+automateDis(model=model, n=0, rotationOffset=8.0, initialRotation=(0.000000, 0.000000, 0.000000), initialTranslation=(80.769196, 0.000000, 0.631826))
