@@ -108,10 +108,7 @@ def automateDis(model, numberOfImages=24, rotationOffset=None, newRotationPlane=
 			mouse.click(x=monitorResolution[0],y=0)
 			# Set rotation
 			mouse.sleep(2)
-			if newRotationPlane:
-				model.setRotation(x = float(initialRotation[0]) + xrotation, y = float(initialRotation[1]), z = float(initialRotation[2]) + yrotation)
-			else:
-				model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]))
+			model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]))
 			print 'rotation =', xrotation, yrotation
 			if rotationOffset is not None:
 				# Set translation to account for off centre rotation
@@ -187,5 +184,6 @@ def automateDis(model, numberOfImages=24, rotationOffset=None, newRotationPlane=
 	print '\nAll done'
 
 # Poot values here
-model = HLMVModelRegistryKey('models.weapons.c_models.c_bet_rocketlauncher.c_bet_rocketlauncher.mdl')
-automateDis(model=model, rotationOffset=None, initialRotation=(0.000000, 0.000000, 0.000000), initialTranslation=(84.497093, 0.000000, 0.856257))
+model = HLMVModelRegistryKey('models.weapons.c_models.c_drg_cowmangler.c_drg_cowmangler.mdl')
+automateDis(model=model, rotationOffset=-6.0, initialRotation=(0.000000, 0.000000, 0.000000), initialTranslation=(107.666588, 0.000000, 2.793768))
+# n = 8 rot = -60
