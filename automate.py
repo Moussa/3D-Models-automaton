@@ -82,8 +82,19 @@ def rotateAboutNewCentre(currentXPosition, currentYPosition, currentZPosition, r
 	newY = (math.sin(yangle * degreesToRadiansFactor) * rotationOffset) + float(currentYPosition)
 	newZ = float(currentZPosition) - (math.sin(xangle * degreesToRadiansFactor) * rotationOffset)
 	return [newX, newY, newZ]
+
+def tiltAboutNewCentre(currentXPosition, currentYPosition, currentZPosition, tiltOffset, yangle, xangle):
+	yangle = float(yangle)
+	xangle = float(xangle)
+	tiltOffset = float(tiltOffset)
+	if yangle < 0.0:
+		yangle = 360.0 - abs(yangle) # Funky HLMV coordinate system
+	newX = (math.cos(yangle * degreesToRadiansFactor) * tiltOffset) + float(currentXPosition)
+	newY = currentYPosition
+	newZ = float(currentZPosition) - (math.sin(xangle * degreesToRadiansFactor) * tiltOffset)
+	return [newX, newY, newZ]
 	
-def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None):
+def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None, tiltOffset=None):
 	""" Method to automize process of taking images for 3D model views. 
 	
 		Parameters:
@@ -112,6 +123,10 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 			if rotationOffset is not None:
 				# Set translation to account for off centre rotation
 				result = rotateAboutNewCentre(initialTranslation[0], initialTranslation[1], initialTranslation[2], rotationOffset, yrotation, xrotation)
+				print 'translation =', result
+				model.setTranslation(x = result[0], y = result[1], z = result[2])
+			elif tiltOffset is not None:
+				result = tiltAboutNewCentre(initialTranslation[0], initialTranslation[1], initialTranslation[2], tiltOffset, yrotation, xrotation)
 				print 'translation =', result
 				model.setTranslation(x = result[0], y = result[1], z = result[2])
 			# Set white colour
@@ -183,5 +198,5 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 	print '\nAll done'
 
 # Poot values here
-model = HLMVModelRegistryKey('models.weapons.c_models.c_dex_shotgun.c_dex_shotgun.mdl')
-automateDis(model=model, n=0, rotationOffset=8.0, initialRotation=(0.000000, 0.000000, 0.000000), initialTranslation=(80.769196, 0.000000, 0.631826))
+model = HLMVModelRegistryKey('models.weapons.c_models.c_candy_cane.c_candy_cane.mdl')
+automateDis(model=model, n=0, rotationOffset=None, initialRotation=(0.000000, -4.000000, 0.000000), initialTranslation=(141.161835, 0.000000, 10.459801), tiltOffset=10.0)
