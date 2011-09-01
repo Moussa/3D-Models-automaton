@@ -12,55 +12,29 @@ degreesToRadiansFactor = math.pi / 180.0
 outputImagesDir = r'output' # The directory where the output images will be saved.
 targetImagesDir = r'targetimages' # The directory containing the target images for mouse clicking.
 finalImageName = r'outpoot.jpg'
+SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Launcher
 monitorResolution = [1920, 1080] # The monitor resolution of the user in the form of a list; [pixel width, pixel height].
 imgCropBoundaries = (1, 42, 1919, 799) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
 
-def toAlpha(weights):
-	def getBrightness(p):
-		return int((299.0 * p[0] + 587.0 * p[1] + 114.0 * p[2]) / 1000.0)
-	imgs = {}
-	loaded = {}
-	totalImages = len(weights)
-	totalWeight = 0
-	size = None
-	blackImg = None
-	loadedBlack = None
-	for i in weights:
-		imgs[i] = Image.open(i)
-		if size is None:
-			size = imgs[i].size
-		if weights[i]:
-			loaded[i] = imgs[i].load()
-			totalWeight += weights[i]
-		else:
-			blackImg = i
-			loadedBlack = imgs[i].load()
-	if blackImg is None:
-		return None
-	finalImg = Image.new('RGBA', size)
-	finalLoad = finalImg.load()
+def getBrightness(p):
+	return (299.0 * p[0] + 587.0 * p[1] + 114.0 * p[2]) / 1000.0
+
+def toAlphaBlackWhite(blackImg, whiteImg):
+	size = blackImg.size
+	blackImg = blackImg.convert('RGBA')
+	loadedBlack = blackImg.load()
+	loadedWhite = whiteImg.load()
 	for x in range(size[0]):
 		for y in range(size[1]):
 			blackPixel = loadedBlack[x, y]
-			totalRed = blackPixel[0]
-			totalGreen = blackPixel[1]
-			totalBlue = blackPixel[2]
-			totalBrightnessDelta = 0
-			initialBrightness = getBrightness(blackPixel)
-			for i in loaded:
-				p = loaded[i][x, y]
-				totalRed += p[0]
-				totalGreen += p[1]
-				totalBlue += p[2]
-				brightness = getBrightness(p)
-				totalBrightnessDelta += brightness - initialBrightness
-			finalLoad[x, y] = (
-				int(totalRed / totalImages),
-				int(totalGreen / totalImages),
-				int(totalBlue / totalImages),
-				int(255 - 255 * totalBrightnessDelta / totalWeight)
+			whitePixel = loadedWhite[x, y]
+			loadedBlack[x, y] = (
+				(blackPixel[0] + whitePixel[0]) / 2,
+				(blackPixel[1] + whitePixel[1]) / 2,
+				(blackPixel[2] + whitePixel[2]) / 2,
+				int(255.0 - 255.0 * (getBrightness(whitePixel) - getBrightness(blackPixel)))
 			)
-	return finalImg
+	return blackImg
 
 def rotateAboutNewCentre(currentXPosition, currentYPosition, currentZPosition, rotationOffset, yangle, xangle):
 	""" Method to position a model in HLMV with a new center of rotation.
@@ -125,6 +99,7 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 				result = rotateAboutNewCentre(initialTranslation[0], initialTranslation[1], initialTranslation[2], rotationOffset, yrotation, xrotation)
 				print 'translation =', result
 				model.setTranslation(x = result[0], y = result[1], z = result[2])
+				# Set translation to account for off centre horizontal rotation
 			elif horizontalOffset is not None:
 				result = offsetHorizontally(initialTranslation[0], initialTranslation[1], initialTranslation[2], horizontalOffset, yrotation)
 				print 'translation =', result
@@ -133,11 +108,11 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 			model.setBGColour(255, 255, 255, 255)
 			# Open HLMV
 			mouse.sleep(1)
-			x = mouse.find({targetImagesDir + os.sep + 'openhlmv.png': (0, 0)})
+			x = mouse.find({targetImagesDir + os.sep + 'openhlmv.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
 			if x is None:
-				x = mouse.find({targetImagesDir + os.sep + 'openhlmvunhighlighted.png': (0, 0)})
+				x = mouse.find({targetImagesDir + os.sep + 'openhlmvunhighlighted.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
 			if x is None:
-				x = mouse.find({targetImagesDir + os.sep + 'openhlmvinactive.png': (0, 0)})
+				x = mouse.find({targetImagesDir + os.sep + 'openhlmvinactive.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
 			if x is None:
 				print 'Couldn\'t find source SDK launcher to click on'
 				break
@@ -146,21 +121,16 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 			mouse.sleep(2)
 			SendKeys("""*{UP}""")
 			# Open recent model
-			mouse.find({targetImagesDir + os.sep + 'filemenubutton.png': (0, 0)}, clickpoint=True)
+			#mouse.find({targetImagesDir + os.sep + 'filemenubutton.png': (0, 0)}, clickpoint=True)
+			mouse.click(x=14,y=32)
 			SendKeys("""{DOWN 8}{RIGHT}{ENTER}""")
 			# Take whiteBG screenshot and crop
 			mouse.sleep(2)
 			imgWhiteBG = ImageGrab.grab()
 			imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
-			if xrotation == -15:
-				whiteimgname = str(n) + 'whiteup.png'
-			elif xrotation == 15:
-				whiteimgname = str(n) + 'whitedown.png'
-			else:
-				whiteimgname = str(n) + 'white.png'
-			imgWhiteBG.save(outputImagesDir + os.sep + whiteimgname, "PNG")
 			# Change BG colour to black
-			mouse.find({targetImagesDir + os.sep + 'optionsmenubutton.png': (0, 0)}, clickpoint=True)
+			#mouse.find({targetImagesDir + os.sep + 'optionsmenubutton.png': (0, 0)}, clickpoint=True)
+			mouse.click(x=55,y=32)
 			SendKeys("""{DOWN}{ENTER}""")
 			mouse.sleep(1)
 			SendKeys("""{LEFT 7}{SPACE}{ENTER}""")
@@ -168,15 +138,8 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 			mouse.sleep(1)
 			imgBlackBG = ImageGrab.grab()
 			imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
-			if xrotation == -15:
-				blackimgname = str(n) + 'blackup.png'
-			elif xrotation == 15:
-				blackimgname = str(n) + 'blackdown.png'
-			else:
-				blackimgname = str(n) + 'black.png'
-			imgBlackBG.save(outputImagesDir + os.sep + blackimgname, "PNG")
 			# Remove background from image
-			img = toAlpha({(outputImagesDir + os.sep + whiteimgname): 255,(outputImagesDir + os.sep + blackimgname): 0})
+			img = toAlphaBlackWhite(imgBlackBG, imgWhiteBG)
 			# Save screenshot
 			if xrotation == -15:
 				imgname = str(n) + 'up.png'
@@ -185,9 +148,6 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 			else:
 				imgname = str(n) + '.png'
 			img.save(outputImagesDir + os.sep + imgname, "PNG")
-			# Remove temp black and white images
-			os.remove(outputImagesDir + os.sep + whiteimgname)
-			os.remove(outputImagesDir + os.sep + blackimgname)
 		n += 1
 	# Close HLMV finally
 	mouse.click(x = monitorResolution[0], y = 0)
@@ -198,5 +158,5 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 	print '\nAll done'
 
 # Poot values here
-model = HLMVModelRegistryKey('models.weapons.c_models.c_crusaders_crossbow.c_crusaders_crossbow.mdl')
-automateDis(model=model, n=0, rotationOffset=None, horizontalOffset=None, initialRotation=(0.000000, 0.000000, 0.000000), initialTranslation=(65.580681, 0.000000, 3.900979))
+model = HLMVModelRegistryKey('models.weapons.c_models.c_proto_syringegun.c_proto_syringegun.mdl')
+automateDis(model=model, n=0, rotationOffset=2.0, horizontalOffset=None, initialRotation=(0.000000, 0.000000, 0.000000), initialTranslation=(73.200104, 0.000000, 3.652385))

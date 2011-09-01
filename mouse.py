@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+try:
+	import psyco
+	psyco.full()
+except:
+	pass
+
 import time
 from ctypes import *
 from SendKeys import SendKeys as key
@@ -100,24 +106,16 @@ def doubleclick(x, y=None, delay=.02):
 	sleep(delay * 2)
 	return result
 
-def find(findimg, insideimg=None, fail=False, clickpoint=False):
-	r = subfind(findimg, insideimg=insideimg)
-	if r is None:
-		return None
-	if clickpoint:
-		click(r)
-	return r
-
-def subfind(findimg,insideimg=None):
-	if type(findimg) in(type(()),type([])):
+def subfind(findimg, insideimg=None, startingPoint=None):
+	if type(findimg) in(type(()), type([])):
 		for i in findimg:
-			r = subfind(i, insideimg=insideimg)
+			r = subfind(i, insideimg=insideimg, startingPoint=startingPoint)
 			if r is not None:
 				return r
 		return None
 	if type(findimg) is type({}):
 		for i in findimg.keys():
-			r = subfind(i, insideimg=insideimg)
+			r = subfind(i, insideimg=insideimg, startingPoint=startingPoint)
 			if r is not None:
 				return (r[0] + findimg[i][0], r[1] + findimg[i][1])
 		return None
@@ -131,11 +129,34 @@ def subfind(findimg,insideimg=None):
 		insideimg = Image.open(insideimg).convert('RGB')
 	else:
 		insideimg = insideimg.convert('RGB')
-	findload=findimg.load()
-	insideload=insideimg.load()
-	point=None
-	for x in range(insideimg.size[0]-findimg.size[0]):
-		for y in range(insideimg.size[1]-findimg.size[1]):
+	searchableSize = (insideimg.size[0] - findimg.size[0], insideimg.size[1] - findimg.size[1])
+	if startingPoint is None:
+		startingPoint = (searchableSize[0] / 2, searchableSize[1] / 2)
+	else:
+		startingPoint = (min(searchableSize[0] - 1, max(0, startingPoint[0])), min(searchableSize[1] - 1, max(0, startingPoint[1])))
+	findload = findimg.load()
+	insideload = insideimg.load()
+	point = None
+	rangeX = max(searchableSize[0] - startingPoint[0], startingPoint[0])
+	searchX = [startingPoint[0]]
+	for x in xrange(1, rangeX):
+		nextCol = startingPoint[0] + x
+		prevCol = startingPoint[0] - x
+		if nextCol < searchableSize[0]:
+			searchX.append(nextCol)
+		if prevCol >= 0:
+			searchX.append(prevCol)
+	searchY = [startingPoint[1]]
+	rangeY = max(searchableSize[1] - startingPoint[1], startingPoint[1])
+	for y in xrange(1, rangeY):
+		nextRow = startingPoint[1] + y
+		prevRow = startingPoint[1] - y
+		if nextRow < searchableSize[1]:
+			searchY.append(nextRow)
+		if prevRow >= 0:
+			searchY.append(prevRow)
+	for x in searchX:
+		for y in searchY:
 			sofarsogood = True
 			for x2 in range(findimg.size[0]):
 				for y2 in range(findimg.size[1]):
@@ -152,3 +173,11 @@ def subfind(findimg,insideimg=None):
 		if point is not None:
 			break
 	return point
+
+def find(findimg, insideimg=None, fail=False, clickpoint=False, startingPoint=None):
+	r = subfind(findimg, insideimg=insideimg, startingPoint=startingPoint)
+	if r is None:
+		return None
+	if clickpoint:
+		click(r)
+	return r
