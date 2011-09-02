@@ -15,6 +15,8 @@ finalImageName = r'outpoot.jpg'
 SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Launcher
 monitorResolution = [1920, 1080] # The monitor resolution of the user in the form of a list; [pixel width, pixel height].
 imgCropBoundaries = (1, 42, 1919, 799) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
+fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
+optionsButtonCoodinates = (55, 32) # The coordinates for the Options menu button in HLMV
 
 def getBrightness(p):
 	return (299.0 * p[0] + 587.0 * p[1] + 114.0 * p[2]) / 1000.0
@@ -66,8 +68,18 @@ def offsetHorizontally(currentXPosition, currentYPosition, currentZPosition, hor
 	newY = (math.sin(yangle * degreesToRadiansFactor) * horizontalOffset) + float(currentYPosition)
 	newZ = currentZPosition
 	return [newX, newY, newZ]
+
+def offsetVertically(currentXPosition, currentYPosition, currentZPosition, verticalOffset, yangle, xangle):
+	yangle = float(yangle)
+	verticalOffset = float(verticalOffset)
+	if yangle < 0.0:
+		yangle = 360.0 - abs(yangle) # Funky HLMV coordinate system
+	newX = ((math.sin(xangle * degreesToRadiansFactor)) * (math.sin(yangle * degreesToRadiansFactor)) * verticalOffset) + float(currentXPosition)
+	newY = ((math.sin(yangle * degreesToRadiansFactor)) * (math.sin(xangle * degreesToRadiansFactor)) * verticalOffset) + float(currentYPosition)
+	newZ = currentZPosition
+	return [newX, newY, newZ]
 	
-def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None, tiltOffset=None, horizontalOffset=None):
+def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None, tiltOffset=None, horizontalOffset=None, verticalOffset=None):
 	""" Method to automize process of taking images for 3D model views. 
 	
 		Parameters:
@@ -104,6 +116,10 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 				result = offsetHorizontally(initialTranslation[0], initialTranslation[1], initialTranslation[2], horizontalOffset, yrotation)
 				print 'translation =', result
 				model.setTranslation(x = result[0], y = result[1], z = result[2])
+			elif verticalOffset is not None:
+				result = offsetVertically(initialTranslation[0], initialTranslation[1], initialTranslation[2], verticalOffset, yrotation, xrotation)
+				print 'translation =', result
+				model.setTranslation(x = result[0], y = result[1], z = result[2])
 			# Set white colour
 			model.setBGColour(255, 255, 255, 255)
 			# Open HLMV
@@ -121,16 +137,14 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 			mouse.sleep(2)
 			SendKeys("""*{UP}""")
 			# Open recent model
-			#mouse.find({targetImagesDir + os.sep + 'filemenubutton.png': (0, 0)}, clickpoint=True)
-			mouse.click(x=14,y=32)
+			mouse.click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
 			SendKeys("""{DOWN 8}{RIGHT}{ENTER}""")
 			# Take whiteBG screenshot and crop
 			mouse.sleep(2)
 			imgWhiteBG = ImageGrab.grab()
 			imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
 			# Change BG colour to black
-			#mouse.find({targetImagesDir + os.sep + 'optionsmenubutton.png': (0, 0)}, clickpoint=True)
-			mouse.click(x=55,y=32)
+			mouse.click(x=optionsButtonCoodinates[0],y=optionsButtonCoodinates[1])
 			SendKeys("""{DOWN}{ENTER}""")
 			mouse.sleep(1)
 			SendKeys("""{LEFT 7}{SPACE}{ENTER}""")
@@ -158,5 +172,12 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 	print '\nAll done'
 
 # Poot values here
-model = HLMVModelRegistryKey('models.weapons.c_models.c_proto_syringegun.c_proto_syringegun.mdl')
-automateDis(model=model, n=0, rotationOffset=2.0, horizontalOffset=None, initialRotation=(0.000000, 0.000000, 0.000000), initialTranslation=(73.200104, 0.000000, 3.652385))
+model = HLMVModelRegistryKey('models.weapons.c_models.c_axtinguisher.c_axtinguisher_pyro.mdl')
+automateDis(model=model,
+			n=15,
+			rotationOffset=None,
+			horizontalOffset=None,
+			verticalOffset=10.0,
+			initialRotation=(0.000000, 0.000000, 0.000000),
+			initialTranslation=(94.242805, 0.000000, 11.897827)
+			)
