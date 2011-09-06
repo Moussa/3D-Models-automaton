@@ -73,6 +73,15 @@ class HLMVModelRegistryKey:
 		a = float("%.6f" % (float(a)/255.0))
 		value = '(%s %s %s %s)' % (r, g, b, a)
 		self.setKeyValue('bgColor', _winreg.REG_SZ, value)
+	
+	def setNormalMapping(self, value):
+		if type(value) is type(True):
+			if value:
+				self.setKeyValue('enablenormalmapping', _winreg.REG_DWORD, 1)
+			else:
+				self.setKeyValue('enablenormalmapping', _winreg.REG_DWORD, 0)
+		else:
+			print 'argument is not a bool'
 
 # Example usage
 """

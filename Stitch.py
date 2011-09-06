@@ -7,7 +7,6 @@ except:
 
 targetDimension = 280
 targetSize = 512 * 1024 # 512 KB
-#targetSize = 768 * 1024
 
 def autocrop(img):
 	load = img.load()
@@ -104,10 +103,9 @@ def stitch(imagesDir, outpootFile):
 		quality -= 1
 		fullImg.save(outpootFile, 'JPEG', quality=quality, optimize=True, progressive=True)
 	print 'Saved to', outpootFile, 'with quality', quality
-	print 'Offset map is:', '{{Offset map | ' + str(currentOffset) + ',' + str(rescaledMaxSize[0]) + ',' + str(finalSize[1]) + ',3,' + ','.join(offsetMap) + '}}'
 	h = open(imagesDir + os.sep + 'offsetmap.txt', 'wb')
 	h.write("""{{#switch: {{{1|}}}
-  | map = \n""" + str(currentOffset) + ',' + str(rescaledMaxSize[0]) + ',' + str(finalSize[1]) + ',3,' + ','.join(offsetMap) + """\n  | width = 280
+  | map = \n""" + str(currentOffset) + ',' + str(rescaledMaxSize[0]) + ',' + str(finalSize[1]) + ',3,' + ','.join(offsetMap) + """\n  | width = """ + str(targetDimension) + """
   | height = """ + str(targetDimension) + """
   | startframe = 16
 }}<noinclude>[[Category:3D model images]]
