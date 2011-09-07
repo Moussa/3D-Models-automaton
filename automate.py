@@ -80,7 +80,14 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 	
 	folder = raw_input('Folder name for created images: ')
 	outputFolder = outputImagesDir + os.sep + folder
-	os.mkdir(outputFolder)
+	try:
+		os.mkdir(outputFolder)
+	except:
+		answer = raw_input('Folder already exists, overwrite files? y\\n? ')
+		if answer == 'yes' or answer == 'y':
+			pass
+		elif answer == 'no' or answer == 'n':
+			sys.exit(1)
 	
 	if initialTranslation is None:
 		initialTranslation = [model.returnTranslation()['x'], model.returnTranslation()['y'], model.returnTranslation()['z']]
