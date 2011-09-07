@@ -77,6 +77,11 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 				numberOfImages -> Number of images to take for one full rotation. Optional, will default to 24.
 				rotationOffset -> The distance from the default centre of rotation to the new one (in HLMV units). Optional.
 	"""
+	
+	folder = raw_input('Folder name for created images: ')
+	outputFolder = outputImagesDir + os.sep + folder
+	os.mkdir(outputFolder)
+	
 	if initialTranslation is None:
 		initialTranslation = [model.returnTranslation()['x'], model.returnTranslation()['y'], model.returnTranslation()['z']]
 	if initialRotation is None:
@@ -149,13 +154,13 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 					imgname = str(n) + 'down.png'
 				else:
 					imgname = str(n) + '.png'
-				img.save(outputImagesDir + os.sep + imgname, "PNG")
+				img.save(outputFolder + os.sep + imgname, "PNG")
 		n += 1
 	# Close HLMV finally
 	mouse.click(x = monitorResolution[0], y = 0)
 	# Stitch images together
 	print 'Stitching images together...'
-	stitch(outputImagesDir, finalImageName)
+	stitch(outputFolder, finalImageName)
 	# All done yay
 	print '\nAll done'
 
