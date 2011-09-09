@@ -95,6 +95,7 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 		initialRotation = [model.returnRotation()['x'], model.returnRotation()['y'], model.returnRotation()['z']]
 	mouse.sleep(3)
 	
+	mouse.click(x=monitorResolution[0],y=0)
 	print 'initialTranslation =', initialTranslation
 	print 'initialRotation =', initialRotation
 	model.setTranslation(x = initialTranslation[0], y = initialTranslation[1], z = initialTranslation[2])
@@ -104,8 +105,6 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 		print 'n =', str(n)
 		for xrotation in range(-15, 30, 15):
 			if (disableXRotation and xrotation == 0) or not disableXRotation:
-				# Close HLMV
-				mouse.click(x=monitorResolution[0],y=0)
 				# Set rotation
 				mouse.sleep(2)
 				model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]), z = initialRotation[2])
@@ -162,6 +161,8 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 				else:
 					imgname = str(n) + '.png'
 				img.save(outputFolder + os.sep + imgname, "PNG")
+				# Close HLMV
+				mouse.click(x=monitorResolution[0],y=0)
 		n += 1
 	# Close HLMV finally
 	mouse.click(x = monitorResolution[0], y = 0)
