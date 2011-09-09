@@ -164,8 +164,6 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 				# Close HLMV
 				mouse.click(x=monitorResolution[0],y=0)
 		n += 1
-	# Close HLMV finally
-	mouse.click(x = monitorResolution[0], y = 0)
 	# Stitch images together
 	print 'Stitching images together...'
 	stitch(outputFolder, finalImageName)
