@@ -96,6 +96,7 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 	mouse.sleep(3)
 	
 	mouse.click(x=monitorResolution[0],y=0)
+	mouse.sleep(2)
 	print 'initialTranslation =', initialTranslation
 	print 'initialRotation =', initialRotation
 	model.setTranslation(x = initialTranslation[0], y = initialTranslation[1], z = initialTranslation[2])
