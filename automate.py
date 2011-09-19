@@ -74,8 +74,13 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 	
 		Parameters:
                 model -> An instance of a HLMVModelRegistryKey object for the model. Required.
-				numberOfImages -> Number of images to take for one full rotation. Optional, will default to 24.
-				rotationOffset -> The distance from the default centre of rotation to the new one (in HLMV units). Optional.
+				numberOfImages -> Number of images to take for one full rotation. Optional, default is 24.
+				n -> Which nth step of rotation to start at. Optional, default is 0.
+				rotationOffset -> The distance from the default centre of rotation to the new one (in HLMV units). Optional, default is none.
+				initialRotation -> The initial model rotation as a tuple. Optional, default is (0 0 0).
+				initialTranslation -> The initial model translation as a tuple. Optional, default is (0 0 0).
+				verticalOffset -> The vertical offset for models that are centered in both other planes but not vertically. Optional, default is none.
+				disableXRotation -> Boolean that disables tilting. Default is False.
 	"""
 	
 	folder = raw_input('Folder name for created images: ')

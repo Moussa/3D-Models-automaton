@@ -108,7 +108,7 @@ def stitch(imagesDir, outpootFile):
   | map = \n""" + str(currentOffset) + ',' + str(rescaledMaxSize[0]) + ',' + str(finalSize[1]) + ',3,' + ','.join(offsetMap) + """\n  | width = """ + str(targetDimension) + """
   | height = """ + str(targetDimension) + """
   | startframe = 16
-}}<noinclude>[[Category:3D model images]]
+}}<noinclude>{{3D viewer}}[[Category:3D model images]]
 {{Externally linked}}""")
 	h.close()
 	print 'Offset map saved to ' + imagesDir + os.sep + 'offsetmap.txt'
