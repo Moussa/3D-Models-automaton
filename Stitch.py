@@ -105,6 +105,7 @@ def stitch(imagesDir, outpootFile):
 	print 'Saved to', outpootFile, 'with quality', quality
 	h = open(imagesDir + os.sep + 'offsetmap.txt', 'wb')
 	h.write("""{{#switch: {{{1|}}}
+  | url = <nowiki></nowiki>
   | map = \n""" + str(currentOffset) + ',' + str(rescaledMaxSize[0]) + ',' + str(finalSize[1]) + ',3,' + ','.join(offsetMap) + """\n  | width = """ + str(targetDimension) + """
   | height = """ + str(targetDimension) + """
   | startframe = 16

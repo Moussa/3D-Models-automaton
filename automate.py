@@ -106,6 +106,7 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 	print 'initialRotation =', initialRotation
 	model.setTranslation(x = initialTranslation[0], y = initialTranslation[1], z = initialTranslation[2])
 	model.setNormalMapping(True)
+	SDKLauncherCoords = None
 	
 	for yrotation in range((-180 + (360/24 * n)), 180, 360/numberOfImages):
 		print 'n =', str(n)
@@ -129,15 +130,16 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 				model.setBGColour(255, 255, 255, 255)
 				# Open HLMV
 				mouse.sleep(1)
-				x = mouse.find({targetImagesDir + os.sep + 'openhlmv.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
-				if x is None:
-					x = mouse.find({targetImagesDir + os.sep + 'openhlmvunhighlighted.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
-				if x is None:
-					x = mouse.find({targetImagesDir + os.sep + 'openhlmvinactive.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
-				if x is None:
-					print 'Couldn\'t find source SDK launcher to click on'
-					break
-				mouse.doubleclick(x)
+				if SDKLauncherCoords is None:
+					SDKLauncherCoords = mouse.find({targetImagesDir + os.sep + 'openhlmv.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
+					if SDKLauncherCoords is None:
+						SDKLauncherCoords = mouse.find({targetImagesDir + os.sep + 'openhlmvunhighlighted.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
+					if SDKLauncherCoords is None:
+						SDKLauncherCoords = mouse.find({targetImagesDir + os.sep + 'openhlmvinactive.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
+					if SDKLauncherCoords is None:
+						print 'Couldn\'t find source SDK launcher to click on'
+						break
+				mouse.doubleclick(SDKLauncherCoords)
 				# Maximise HLMV
 				mouse.sleep(2)
 				SendKeys("""*{UP}""")
