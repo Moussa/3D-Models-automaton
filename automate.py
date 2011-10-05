@@ -1,4 +1,5 @@
 import mouse, Image, ImageGrab, os, subprocess, math
+from subprocess import Popen, PIPE
 from HLMVModel import *
 from SendKeys import SendKeys
 from Stitch import *
@@ -16,7 +17,6 @@ SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Laun
 monitorResolution = [1920, 1080] # The monitor resolution of the user in the form of a list; [pixel width, pixel height].
 imgCropBoundaries = (1, 42, 1919, 799) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
 fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
-optionsButtonCoodinates = (55, 32) # The coordinates for the Options menu button in HLMV
 
 def getBrightness(p):
 	return (299.0 * p[0] + 587.0 * p[1] + 114.0 * p[2]) / 1000.0
@@ -98,10 +98,15 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 		initialTranslation = [model.returnTranslation()['x'], model.returnTranslation()['y'], model.returnTranslation()['z']]
 	if initialRotation is None:
 		initialRotation = [model.returnRotation()['x'], model.returnRotation()['y'], model.returnRotation()['z']]
+	
+	# Time for user to cancel script start
 	mouse.sleep(3)
 	
-	mouse.click(x=monitorResolution[0],y=0)
-	mouse.sleep(2)
+	try:
+		subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
+		mouse.sleep(2)
+	except:
+		pass
 	print 'initialTranslation =', initialTranslation
 	print 'initialRotation =', initialRotation
 	model.setTranslation(x = initialTranslation[0], y = initialTranslation[1], z = initialTranslation[2])
@@ -151,12 +156,8 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 				imgWhiteBG = ImageGrab.grab()
 				imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
 				# Change BG colour to black
-				mouse.click(x=optionsButtonCoodinates[0],y=optionsButtonCoodinates[1])
-				SendKeys("""{DOWN}{ENTER}""")
-				mouse.sleep(1)
-				SendKeys("""{LEFT 7}{SPACE}{ENTER}""")
+				SendKeys("""^b""")
 				# Take blackBG screenshot and crop
-				mouse.sleep(1)
 				imgBlackBG = ImageGrab.grab()
 				imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
 				# Remove background from image
@@ -170,7 +171,7 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 					imgname = str(n) + '.png'
 				img.save(outputFolder + os.sep + imgname, "PNG")
 				# Close HLMV
-				mouse.click(x=monitorResolution[0],y=0)
+				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
 		n += 1
 	# Stitch images together
 	print 'Stitching images together...'
