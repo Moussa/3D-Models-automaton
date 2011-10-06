@@ -54,3 +54,6 @@ cdef class pie:
 
 def open(filename):
 	return pie(pilImage=Image.open(filename))
+
+def wrap(pilImage):
+	return pie(pilImage=pilImage)
