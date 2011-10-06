@@ -10,6 +10,7 @@ cdef inline int getAlphaFor(int wR, int wG, int wB, int bR, int bG, int bB):
 cdef class pie:
 	imageDtype = np.dtype('i')
 	exportDtype = np.dtype('uint8')
+	savingThreads = []
 	cdef public pil
 	cdef public numpy
 	cdef public int sizeX
@@ -47,7 +48,12 @@ cdef class pie:
 				blended[y, x, 3] = getAlphaFor(img2[y, x, 0], img2[y, x, 1], img2[y, x, 2], img1[y, x, 0], img1[y, x, 1], img1[y, x, 2])
 		return pie(numpyImage=blended)
 	def asyncSave(self, *args, **kwargs):
-		threading.Thread(target=self.save, args = args, kwargs = kwargs).start()
+		t = threading.Thread(target=self._asyncSave, args = args, kwargs = kwargs)
+		pie.savingThreads.append(t)
+		t.start()
+	def _asyncSave(self, *args, **kwargs):
+		self.save(*args, **kwargs)
+		pie.savingThreads.remove(threading.current_thread())
 	def save(self, *args, **kwargs):
 		self.sync()
 		self.pil.save(*args, **kwargs)
@@ -57,3 +63,7 @@ def open(filename):
 
 def wrap(pilImage):
 	return pie(pilImage=pilImage)
+
+def waitForSaves():
+	for t in pie.savingThreads:
+		t.join()
