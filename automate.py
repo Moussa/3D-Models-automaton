@@ -1,4 +1,4 @@
-import mouse, Image, ImageGrab, os, subprocess, math
+import mouse, Image, ImageGrab, os, subprocess, math, imgpie
 from subprocess import Popen, PIPE
 from HLMVModel import *
 from SendKeys import SendKeys
@@ -17,6 +17,70 @@ SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Laun
 monitorResolution = [1920, 1080] # The monitor resolution of the user in the form of a list; [pixel width, pixel height].
 imgCropBoundaries = (1, 42, 1919, 799) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
 fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
+
+paintDict = {'Stock': 'Stock',
+			 'An Extraordinary Abundance of Tinge': '230 230 230',
+			 'Color No. 216-190-216': '216 190 216',
+			 'Peculiarly Drab Tincture': '197 175 145',
+			 'Aged Moustache Grey': '126 126 126',
+			 'A Distinctive Lack of Hue': '20 20 20',
+			 'Radigan Conagher Brown': '105 77 58',
+			 'Ye Olde Rustic Color': '124 108 87',
+			 'Muskelmannbraun': '165 117 69',
+			 'Australium Gold': '231 181 59',
+			 'The Color of a Gentlemann\'s Business Pants': '240 230 140',
+			 'Dark Salmon Injustice': '233 150 122',
+			 'Mann Co. Orange': '207 115 54',
+			 'Pink as Hell': '255 105 180',
+			 'A Deep Commitment to Purple': '125 64 113',
+			 'Noble Hatter\'s Violet': '81 56 74',
+			 'A Color Similar to Slate': '47 79 79',
+			 'The Bitter Taste of Defeat and Lime': '50 205 50',
+			 'Indubitably Green': '114 158 66',
+			 'Drably Olive': '128 128 0',
+			 'Zephaniah\'s Greed': '66 79 59',
+			 'Waterlogged Lab Coat (RED)': '168 154 140',
+			 'Balaclavas Are Forever (RED)': '59 31 35',
+			 'Team Spirit (RED)': '184 56 59',
+			 'Operator\'s Overalls (RED)': '72 56 56',
+			 'The Value of Teamwork (RED)': '128 48 32',
+			 'An Air of Debonair (RED)': '101 71 64',
+			 'Cream Spirit (RED)': '195 108 45'
+			 }
+
+BLUPaintDict = {'Stock (BLU)': 'Stock',
+				'Waterlogged Lab Coat (BLU)': '131 159 163',
+				'Balaclavas Are Forever (BLU)': '24 35 61',
+				'Team Spirit (BLU)': '88 133 162',
+				'Operator\'s Overalls (BLU)': '56 66 72',
+				'The Value of Teamwork (BLU)': '37 109 141',
+				'An Air of Debonair (BLU)': '40 57 77',
+				'Cream Spirit (BLU)': '184 128 53'
+				}
+
+def paintHat(colour, VMTFile):
+	vmt = open(VMTFile, 'rb').read()
+	pattern = '"\$color2" "\{(.[^\}]+)\}"'
+	regex = re.compile(pattern, re.IGNORECASE)
+	if regex.search(vmt):
+		if colour == 'Stock':
+			pattern2 = '(\s*)"\$colortint_base" "\{(.[^\}]+)\}"'
+			regex = re.compile(pattern2, re.IGNORECASE)
+			result = regex.search(vmt)
+			vmt = re.sub(pattern, '"$color2" "{' + result.group(2) + '}"', vmt)
+		else:
+			vmt = re.sub(pattern, '"$color2" "{' + colour + '}"', vmt)
+	else:
+		pattern = '(\s*)"\$colortint_base" "\{(.[^\}]+)\}"'
+		regex = re.compile(pattern, re.IGNORECASE)
+		result = regex.search(vmt)
+		if colour == 'Stock':
+			vmt = re.sub(pattern, result.group(1) + '"$colortint_base" "{' + result.group(2) + '}"\n' + result.group(1).replace('\r\n','') + '"$color2" "{' + result.group(2) + '}"', vmt)
+		else:
+			vmt = re.sub(pattern, result.group(1) + '"$colortint_base" "{' + result.group(2) + '}"\n' + result.group(1).replace('\r\n','') + '"$color2" "{' + colour + '}"', vmt)
+	f = open(VMTFile, 'wb')
+	f.write(vmt)
+	f.close()
 
 def getBrightness(p):
 	return (299.0 * p[0] + 587.0 * p[1] + 114.0 * p[2]) / 1000.0
@@ -69,7 +133,7 @@ def offsetVertically(currentXPosition, currentYPosition, currentZPosition, verti
 	newZ = currentZPosition
 	return [newX, newY, newZ]
 	
-def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None, verticalOffset=None, disableXRotation=False):
+def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None, verticalOffset=None, disableXRotation=False, REDVMTFile=None, BLUVMTFile=None):
 	""" Method to automize process of taking images for 3D model views. 
 	
 		Parameters:
@@ -113,12 +177,15 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 	model.setNormalMapping(True)
 	SDKLauncherCoords = None
 	
+	whiteBackgroundImages = {}
+	blackBackgroundImages = {}
+	
 	for yrotation in range((-180 + (360/24 * n)), 180, 360/numberOfImages):
 		print 'n =', str(n)
 		for xrotation in range(-15, 30, 15):
 			if (disableXRotation and xrotation == 0) or not disableXRotation:
 				# Set rotation
-				mouse.sleep(2)
+				mouse.sleep(0.5)
 				model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]), z = initialRotation[2])
 				print 'xRot = %s, yRot = %s' % (xrotation, yrotation)
 				if rotationOffset is not None:
@@ -151,25 +218,62 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 				# Open recent model
 				mouse.click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
 				SendKeys("""{DOWN 8}{RIGHT}{ENTER}""")
-				# Take whiteBG screenshot and crop
+				# Take whiteBG screenshots and crop
 				mouse.sleep(2)
-				imgWhiteBG = ImageGrab.grab()
-				imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
-				# Change BG colour to black
-				SendKeys("""^b""")
-				# Take blackBG screenshot and crop
-				imgBlackBG = ImageGrab.grab()
-				imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
-				# Remove background from image
-				img = toAlphaBlackWhite(imgBlackBG, imgWhiteBG)
-				# Save screenshot
-				if xrotation == -15:
-					imgname = str(n) + 'up.png'
-				elif xrotation == 15:
-					imgname = str(n) + 'down.png'
-				else:
-					imgname = str(n) + '.png'
-				img.save(outputFolder + os.sep + imgname, "PNG")
+				def paintcycle(dict):
+					for colour in dict:
+						paintHat(dict[colour], REDVMTFile)
+						SendKeys("""{F5}""")
+						mouse.sleep(0.1)
+						imgWhiteBG = ImageGrab.grab()
+						imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
+						whiteBackgroundImages[colour] = imgWhiteBG
+					# Change BG colour to black
+					SendKeys("""^b""")
+					# Take blackBG screenshots and crop
+					for colour in dict:
+						paintHat(dict[colour], REDVMTFile)
+						SendKeys("""{F5}""")
+						mouse.sleep(0.1)
+						imgBlackBG = ImageGrab.grab()
+						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
+						blackBackgroundImages[colour] = imgBlackBG
+					SendKeys("""^b""")
+				paintcycle(paintDict)
+				# Change RED hat to BLU
+				redVMTContents = open(REDVMTFile, 'rb').read()
+				bluVMTContents = open(BLUVMTFile, 'rb').read()
+				f = open(REDVMTFile, 'wb')
+				f.write(bluVMTContents)
+				f.close()
+				paintcycle(BLUPaintDict)
+				g = open(REDVMTFile, 'wb')
+				g.write(redVMTContents)
+				g.close()
+				# Remove background from images
+				"""for colour in whiteBackgroundImages:
+					print 'processing ' + colour
+					img = toAlphaBlackWhite(blackBackgroundImages[colour], whiteBackgroundImages[colour])
+					# Save screenshot
+					if xrotation == -15:
+						imgname = str(n) + 'up' + colour + '.png'
+					elif xrotation == 15:
+						imgname = str(n) + 'down' + colour + '.png'
+					else:
+						imgname = str(n) + '' + colour + '.png'
+					img.save(outputFolder + os.sep + imgname, "PNG")"""
+				for colour in whiteBackgroundImages:
+					print 'processing ' + colour
+					black = imgpie.wrap(blackBackgroundImages[colour])
+					white = imgpie.wrap(whiteBackgroundImages[colour])
+					blended = black.blackWhiteBlend(white)
+					if xrotation == -15:
+						imgname = str(n) + 'up' + colour + '.png'
+					elif xrotation == 15:
+						imgname = str(n) + 'down' + colour + '.png'
+					else:
+						imgname = str(n) + '' + colour + '.png'
+					blended.asyncSave(outputFolder + os.sep + imgname)
 				# Close HLMV
 				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
 		n += 1
