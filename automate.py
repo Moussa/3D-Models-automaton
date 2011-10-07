@@ -1,4 +1,4 @@
-import mouse, Image, ImageGrab, os, subprocess, math, imgpie
+import mouse, Image, ImageGrab, os, subprocess, math, imgpie, threading
 from subprocess import Popen, PIPE
 from HLMVModel import *
 from SendKeys import SendKeys
@@ -132,6 +132,24 @@ def offsetVertically(currentXPosition, currentYPosition, currentZPosition, verti
 	newY = ((math.sin(yangle * degreesToRadiansFactor)) * (math.sin(xangle * degreesToRadiansFactor)) * verticalOffset) + float(currentYPosition)
 	newZ = currentZPosition
 	return [newX, newY, newZ]
+
+class BlendingThread(threading.Thread):
+	allThreads = []
+	def __init__(self, black, white, saveTo):
+		self.black = black
+		self.white = white
+		self.saveTo = saveTo
+		threading.Thread.__init__(self)
+		BlendingThread.allThreads.append(self)
+		self.start()
+	def run(self):
+		black = imgpie.wrap(self.black)
+		white = imgpie.wrap(self.white)
+		blended = self.black.blackWhiteBlend(self.white)
+		blended.save(self.saveTo)
+	def waitForAll():
+		for t in BlendingThread.allThreads:
+			t.join()
 	
 def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None, verticalOffset=None, disableXRotation=False, REDVMTFile=None, BLUVMTFile=None):
 	""" Method to automize process of taking images for 3D model views. 
@@ -263,20 +281,18 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 						imgname = str(n) + '' + colour + '.png'
 					img.save(outputFolder + os.sep + imgname, "PNG")"""
 				for colour in whiteBackgroundImages:
-					print 'processing ' + colour
-					black = imgpie.wrap(blackBackgroundImages[colour])
-					white = imgpie.wrap(whiteBackgroundImages[colour])
-					blended = black.blackWhiteBlend(white)
+					print 'Spawning thread for ' + colour
 					if xrotation == -15:
 						imgname = str(n) + 'up' + colour + '.png'
 					elif xrotation == 15:
 						imgname = str(n) + 'down' + colour + '.png'
 					else:
 						imgname = str(n) + '' + colour + '.png'
-					blended.asyncSave(outputFolder + os.sep + imgname)
+					BlendingThread(blackBackgroundImages[colour], whiteBackgroundImages[colour], outputFolder + os.sep + imgname)
 				# Close HLMV
 				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
 		n += 1
+	BlendingThread.waitForAll()
 	# Stitch images together
 	print 'Stitching images together...'
 	stitch(outputFolder, finalImageName)
