@@ -145,7 +145,7 @@ class BlendingThread(threading.Thread):
 	def run(self):
 		black = imgpie.wrap(self.black)
 		white = imgpie.wrap(self.white)
-		blended = self.black.blackWhiteBlend(self.white)
+		blended = black.blackWhiteBlend(white)
 		blended.save(self.saveTo)
 	def waitForAll():
 		for t in BlendingThread.allThreads:
