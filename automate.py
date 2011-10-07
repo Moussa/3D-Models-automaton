@@ -135,18 +135,28 @@ def offsetVertically(currentXPosition, currentYPosition, currentZPosition, verti
 
 class BlendingThread(threading.Thread):
 	allThreads = []
-	def __init__(self, black, white, saveTo):
-		self.black = black
-		self.white = white
-		self.saveTo = saveTo
+	def __init__(self, xrotation, n, black, white, saveTo):
+		self.xrotation = xrotation
+		self.n = n
+		self.blackImages = blackImages
+		self.whiteImages = whiteImages
+		self.saveDir = saveDir
 		threading.Thread.__init__(self)
 		BlendingThread.allThreads.append(self)
 		self.start()
 	def run(self):
-		black = imgpie.wrap(self.black)
-		white = imgpie.wrap(self.white)
-		blended = black.blackWhiteBlend(white)
-		blended.save(self.saveTo)
+		for colour in self.whiteImages:
+			print 'Processing ' + colour
+			if self.xrotation == -15:
+				imgname = str(self.n) + 'up' + colour + '.png'
+			elif self.xrotation == 15:
+				imgname = str(self.n) + 'down' + colour + '.png'
+			else:
+				imgname = str(self.n) + '' + colour + '.png'
+			black = imgpie.wrap(self.blackImages[colour])
+			white = imgpie.wrap(self.whiteImages[colour])
+			blended = black.blackWhiteBlend(white)
+			blended.save(self.saveDir + os.sep + imgname)
 	def waitForAll():
 		for t in BlendingThread.allThreads:
 			t.join()
@@ -280,15 +290,7 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 					else:
 						imgname = str(n) + '' + colour + '.png'
 					img.save(outputFolder + os.sep + imgname, "PNG")"""
-				for colour in whiteBackgroundImages:
-					print 'Spawning thread for ' + colour
-					if xrotation == -15:
-						imgname = str(n) + 'up' + colour + '.png'
-					elif xrotation == 15:
-						imgname = str(n) + 'down' + colour + '.png'
-					else:
-						imgname = str(n) + '' + colour + '.png'
-					BlendingThread(blackBackgroundImages[colour], whiteBackgroundImages[colour], outputFolder + os.sep + imgname)
+				BlendingThread(xrotation, n, blackBackgroundImages, whiteBackgroundImages, outputFolder)
 				# Close HLMV
 				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
 		n += 1
