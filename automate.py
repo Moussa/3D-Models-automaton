@@ -135,7 +135,7 @@ def offsetVertically(currentXPosition, currentYPosition, currentZPosition, verti
 
 class BlendingThread(threading.Thread):
 	allThreads = []
-	def __init__(self, xrotation, n, blackImages, whiteImages, saveTo):
+	def __init__(self, xrotation, n, blackImages, whiteImages, saveDir):
 		self.xrotation = xrotation
 		self.n = n
 		self.blackImages = blackImages
