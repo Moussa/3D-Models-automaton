@@ -172,7 +172,6 @@ def offsetVertically(currentXPosition, currentYPosition, currentZPosition, verti
 	return [newX, newY, newZ]
 
 class BlendingThread(threading.Thread):
-	allThreads = []
 	def __init__(self, xrotation, n, blackImages, whiteImages, saveDir):
 		self.xrotation = xrotation
 		self.n = n
@@ -180,7 +179,6 @@ class BlendingThread(threading.Thread):
 		self.whiteImages = whiteImages
 		self.saveDir = saveDir
 		threading.Thread.__init__(self)
-		BlendingThread.allThreads.append(self)
 		self.start()
 	def run(self):
 		for colour in self.whiteImages:
@@ -195,10 +193,7 @@ class BlendingThread(threading.Thread):
 			white = imgpie.wrap(self.whiteImages[colour])
 			blended = black.blackWhiteBlend(white)
 			blended.save(self.saveDir + os.sep + imgname)
-	def waitForAll():
-		for t in BlendingThread.allThreads:
-			t.join()
-	
+
 def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None, verticalOffset=None, disableXRotation=False, hatName=None, REDVMTFile=None, BLUVMTFile=None):
 	""" Method to automize process of taking images for 3D model views. 
 	
@@ -242,7 +237,7 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 	model.setTranslation(x = initialTranslation[0], y = initialTranslation[1], z = initialTranslation[2])
 	model.setNormalMapping(True)
 	SDKLauncherCoords = None
-	
+	blendThread = BlendingThread(0, 0, {}, {}, None)
 	for yrotation in range((-180 + (360/24 * n)), 180, 360/numberOfImages):
 		print 'n =', str(n)
 		for xrotation in range(-15, 30, 15):
@@ -318,11 +313,8 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 				g.write(redVMTContents)
 				g.close()
 				# Remove background from images
-				try:
-					BlendingThread.waitForAll()
-				except:
-					pass
-				BlendingThread(xrotation, n, blackBackgroundImages, whiteBackgroundImages, outputFolder)
+				blendThread.join()
+				blendThread = BlendingThread(xrotation, n, blackBackgroundImages, whiteBackgroundImages, outputFolder)
 				# Close HLMV
 				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
 		n += 1
