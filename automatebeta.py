@@ -444,7 +444,7 @@ def automateDis(model,
 			else:
 				finalImageName = itemName + ' ' + paintHexDict[colour] + ' 3D.jpg'
 			##### Need to thread this #####
-			if colour == 'Stock (BLU)' and not TeamColours:
+			if colour == 'Stock (BLU)' and not teamColours:
 				pass
 			else:
 				processes.append(subprocess.Popen(['python', 'stitch.py', outputFolder, paintHexDict[colour], finalImageName, str(numberOfImages)]))
