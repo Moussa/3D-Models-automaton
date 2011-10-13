@@ -287,6 +287,7 @@ def automateDis(model,
 	
 	model.setTranslation(x = initialTranslation[0], y = initialTranslation[1], z = initialTranslation[2])
 	model.setNormalMapping(True)
+	model.setBGColour(255, 255, 255, 255)
 	SDKLauncherCoords = None
 	blendThread = BlendingThread(0, 0, {}, {}, None, True, True)
 	
@@ -308,10 +309,7 @@ def automateDis(model,
 					result = offsetVertically(initialTranslation[0], initialTranslation[1], initialTranslation[2], verticalOffset, yrotation, xrotation)
 					print 'translation =', result
 					model.setTranslation(x = result[0], y = result[1], z = result[2])
-				# Set white colour
-				model.setBGColour(255, 255, 255, 255)
 				# Open HLMV
-				mouse.sleep(1)
 				if SDKLauncherCoords is None:
 					SDKLauncherCoords = mouse.find({targetImagesDir + os.sep + 'openhlmv.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
 					if SDKLauncherCoords is None:
@@ -411,7 +409,7 @@ def automateDis(model,
 						imgBlackBG = ImageGrab.grab()
 						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
 				# Remove background from images
-				blendThread.join()
+				#blendThread.join()
 				if paint:
 					blendThread = BlendingThread(xrotation, n, blackBackgroundImages, whiteBackgroundImages, outputFolder, True, True)
 				else:
