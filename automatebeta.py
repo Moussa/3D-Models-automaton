@@ -2,7 +2,10 @@ import mouse, Image, ImageGrab, os, subprocess, math, imgpie, threading, time
 from subprocess import Popen, PIPE
 from HLMVModel import *
 from SendKeys import SendKeys
-from StitchPaint import *
+from Stitch import *
+from uploadFile import *
+from win32con import VK_CAPITAL
+from win32api import GetKeyState
 try:
 	import psyco
 	psyco.full()
@@ -12,7 +15,6 @@ except:
 degreesToRadiansFactor = math.pi / 180.0
 outputImagesDir = r'output' # The directory where the output images will be saved.
 targetImagesDir = r'targetimages' # The directory containing the target images for mouse clicking.
-finalImageName = r'outpoot.jpg' # The name of the final image.
 SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Launcher. This is near the top left of the screen by default.
 monitorResolution = [1920, 1080] # The monitor resolution of the user in the form of a list; [pixel width, pixel height].
 imgCropBoundaries = (1, 42, 1919, 799) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
@@ -172,34 +174,70 @@ def offsetVertically(currentXPosition, currentYPosition, currentZPosition, verti
 	return [newX, newY, newZ]
 
 class BlendingThread(threading.Thread):
-	allThreads = []
-	def __init__(self, xrotation, n, blackImages, whiteImages, saveDir):
+	def __init__(self, xrotation, n, blackImages, whiteImages, saveDir, painted, teamColours):
 		self.xrotation = xrotation
 		self.n = n
 		self.blackImages = blackImages
 		self.whiteImages = whiteImages
 		self.saveDir = saveDir
+		self.painted = painted
+		self.teamColours = teamColours
 		threading.Thread.__init__(self)
-		BlendingThread.allThreads.append(self)
 		self.start()
 	def run(self):
-		for colour in self.whiteImages:
-			print 'Processing ' + colour
-			if self.xrotation == -15:
-				imgname = str(self.n) + 'up' + paintHexDict[colour] + '.png'
-			elif self.xrotation == 15:
-				imgname = str(self.n) + 'down' + paintHexDict[colour] + '.png'
+		if self.painted:
+			for colour in self.whiteImages:
+				print 'Processing ' + colour
+				if self.xrotation == -15:
+					imgname = str(self.n) + 'up' + paintHexDict[colour] + '.png'
+				elif self.xrotation == 15:
+					imgname = str(self.n) + 'down' + paintHexDict[colour] + '.png'
+				else:
+					imgname = str(self.n) + '' + paintHexDict[colour] + '.png'
+				black = imgpie.wrap(self.blackImages[colour])
+				white = imgpie.wrap(self.whiteImages[colour])
+				blended = black.blackWhiteBlend(white)
+				blended.save(self.saveDir + os.sep + imgname)
+		else:
+			if self.teamColours:
+				img = toAlphaBlackWhite(self.blackImages['RED'], self.whiteImages['RED'])
+				img2 = toAlphaBlackWhite(self.blackImages['BLU'], self.whiteImages['BLU'])
+				if self.xrotation == -15:
+					imgname = str(self.n) + 'up RED.png'
+					imgname2 = str(self.n) + 'up BLU.png'
+				elif self.xrotation == 15:
+					imgname = str(self.n) + 'down RED.png'
+					imgname2 = str(self.n) + 'down BLU.png'
+				else:
+					imgname = str(self.n) + ' RED.png'
+					imgname2 = str(self.n) + ' BLU.png'
+				img.save(self.saveDir + os.sep + imgname, "PNG")
+				img2.save(self.saveDir + os.sep + imgname2, "PNG")
 			else:
-				imgname = str(self.n) + '' + paintHexDict[colour] + '.png'
-			black = imgpie.wrap(self.blackImages[colour])
-			white = imgpie.wrap(self.whiteImages[colour])
-			blended = black.blackWhiteBlend(white)
-			blended.save(self.saveDir + os.sep + imgname)
-	def waitForAll():
-		for t in BlendingThread.allThreads:
-			t.join()
-	
-def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None, verticalOffset=None, disableXRotation=False, hatName=None, REDVMTFile=None, BLUVMTFile=None):
+				img = toAlphaBlackWhite(self.blackImages, self.whiteImages)
+				if self.xrotation == -15:
+					imgname = str(self.n) + 'up.png'
+				elif self.xrotation == 15:
+					imgname = str(self.n) + 'down.png'
+				else:
+					imgname = str(self.n) + '.png'
+				img.save(self.saveDir + os.sep + imgname, "PNG")
+
+def automateDis(model,
+				numberOfImages=24,
+				n=0,
+				rotationOffset=None,
+				initialRotation=None,
+				initialTranslation=None,
+				verticalOffset=None,
+				disableXRotation=False,
+				paint=False,
+				teamColours=False,
+				itemName='',
+				REDVMTFile=None,
+				BLUVMTFile=None,
+				wikiUsername=None,
+				wikiPassword=None):
 	""" Method to automize process of taking images for 3D model views. 
 	
 		Parameters:
@@ -211,6 +249,13 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 				initialTranslation -> The initial model translation as a tuple. Optional, default is (0 0 0).
 				verticalOffset -> The vertical offset for models that are centered in both other planes but not vertically. Optional, default is none.
 				disableXRotation -> Boolean that disables tilting. Default is False.
+				paint -> Boolean to indicate whether model is paintable. Optional, default is False.
+				teamColours -> Boolean to indicate whether model is team coloured. Optional, default is False.
+				itemName -> The name of the item. Optional, default is blank.
+				REDVMTFile -> The RED vmt file location. Optional, default is none.
+				BLUVMTFile -> The BLU vmt file location. Optional, default is none.
+				wikiUsername -> wiki.tf2.com username. Optional, default is none.
+				wikiPassword -> wiki.tf2.com password. Optional, default is none.
 	"""
 	
 	folder = raw_input('Folder name for created images: ')
@@ -239,9 +284,11 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 		pass
 	print 'initialTranslation =', initialTranslation
 	print 'initialRotation =', initialRotation
+	
 	model.setTranslation(x = initialTranslation[0], y = initialTranslation[1], z = initialTranslation[2])
 	model.setNormalMapping(True)
 	SDKLauncherCoords = None
+	blendThread = BlendingThread(0, 0, {}, {}, None, True, True)
 	
 	for yrotation in range((-180 + (360/24 * n)), 180, 360/numberOfImages):
 		print 'n =', str(n)
@@ -275,85 +322,226 @@ def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotat
 						print 'Couldn\'t find source SDK launcher to click on'
 						break
 				mouse.doubleclick(SDKLauncherCoords)
-				# Maximise HLMV
 				mouse.sleep(2)
-				SendKeys("""*{UP}""")
+				# Maximise HLMV
+				SendKeys(r'*{UP}')
 				# Open recent model
 				mouse.click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
-				SendKeys("""{DOWN 8}{RIGHT}{ENTER}""")
-				# Take whiteBG screenshots and crop
-				mouse.sleep(1.5)
+				SendKeys(r'{DOWN 8}{RIGHT}{ENTER}')
+				mouse.sleep(1)
+				# Item painting method
 				def paintcycle(dict, whiteBackgroundImages, blackBackgroundImages):
+					# Take whiteBG screenshots and crop
 					for colour in dict:
 						paintHat(dict[colour], REDVMTFile)
-						SendKeys("""{F5}""")
+						SendKeys(r'{F5}')
 						mouse.sleep(0.1)
 						imgWhiteBG = ImageGrab.grab()
 						imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
 						whiteBackgroundImages[colour] = imgWhiteBG
 					# Change BG colour to black
-					SendKeys("""^b""")
+					SendKeys(r'^b')
 					# Take blackBG screenshots and crop
 					for colour in dict:
 						paintHat(dict[colour], REDVMTFile)
-						SendKeys("""{F5}""")
+						SendKeys(r'{F5}')
 						mouse.sleep(0.1)
 						imgBlackBG = ImageGrab.grab()
 						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
 						blackBackgroundImages[colour] = imgBlackBG
-					SendKeys("""^b""")
-					SendKeys("""{F5}""")
+					SendKeys(r'^b')
+					SendKeys(r'{F5}')
 					return whiteBackgroundImages, blackBackgroundImages
-				whiteBackgroundImages = {}
-				blackBackgroundImages = {}
-				whiteBackgroundImages, blackBackgroundImages = paintcycle(paintDict, whiteBackgroundImages, blackBackgroundImages)
-				# Change RED hat to BLU
-				redVMTContents = open(REDVMTFile, 'rb').read()
-				bluVMTContents = open(BLUVMTFile, 'rb').read()
-				f = open(REDVMTFile, 'wb')
-				f.write(bluVMTContents)
-				f.close()
-				whiteBackgroundImages, blackBackgroundImages = paintcycle(BLUPaintDict, whiteBackgroundImages, blackBackgroundImages)
-				g = open(REDVMTFile, 'wb')
-				g.write(redVMTContents)
-				g.close()
+				if paint:
+					whiteBackgroundImages = {}
+					blackBackgroundImages = {}
+					whiteBackgroundImages, blackBackgroundImages = paintcycle(paintDict, whiteBackgroundImages, blackBackgroundImages)
+					if teamColours:
+						# Change RED hat to BLU
+						redVMTContents = open(REDVMTFile, 'rb').read()
+						bluVMTContents = open(BLUVMTFile, 'rb').read()
+						f = open(REDVMTFile, 'wb')
+						f.write(bluVMTContents)
+						f.close()
+						whiteBackgroundImages, blackBackgroundImages = paintcycle(BLUPaintDict, whiteBackgroundImages, blackBackgroundImages)
+						g = open(REDVMTFile, 'wb')
+						g.write(redVMTContents)
+						g.close()
+					else:
+						whiteBackgroundImages, blackBackgroundImages = paintcycle(BLUPaintDict, whiteBackgroundImages, blackBackgroundImages)
+				else:
+					if teamColours:
+						# Take whiteBG screenshot and crop
+						imgWhiteBGRED = ImageGrab.grab()
+						imgWhiteBGRED = imgWhiteBGRED.crop(imgCropBoundaries)
+						# Change BG colour to black
+						SendKeys(r'^b')
+						# Take blackBG screenshot and crop
+						imgBlackBGRED = ImageGrab.grab()
+						imgBlackBGRED = imgBlackBGRED.crop(imgCropBoundaries)
+						# Change BG colour to white
+						SendKeys(r'^b')
+						# Change weapon colour to BLU
+						redVMTContents = open(REDVMTFile, 'rb').read()
+						bluVMTContents = open(BLUVMTFile, 'rb').read()
+						f = open(REDVMTFile, 'wb')
+						f.write(bluVMTContents)
+						f.close()
+						SendKeys(r'{F5}')
+						mouse.sleep(0.1)
+						# Take whiteBG screenshot and crop
+						imgWhiteBGBLU = ImageGrab.grab()
+						imgWhiteBGBLU = imgWhiteBGBLU.crop(imgCropBoundaries)
+						# Change BG colour to black
+						SendKeys(r'^b')
+						# Take blackBG screenshot and crop
+						imgBlackBGBLU = ImageGrab.grab()
+						imgBlackBGBLU = imgBlackBGBLU.crop(imgCropBoundaries)
+						# Return VMT back to RED
+						g = open(REDVMTFile, 'wb')
+						g.write(redVMTContents)
+						g.close()
+					else:
+						# Take whiteBG screenshot and crop
+						imgWhiteBG = ImageGrab.grab()
+						imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
+						# Change BG colour to black
+						SendKeys(r'^b')
+						# Take blackBG screenshot and crop
+						imgBlackBG = ImageGrab.grab()
+						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
 				# Remove background from images
-				try:
-					BlendingThread.waitForAll()
-				except:
-					pass
-				BlendingThread(xrotation, n, blackBackgroundImages, whiteBackgroundImages, outputFolder)
+				blendThread.join()
+				if paint:
+					blendThread = BlendingThread(xrotation, n, blackBackgroundImages, whiteBackgroundImages, outputFolder, True, True)
+				else:
+					if teamColours:
+						blendThread = BlendingThread(xrotation, n, {'RED':imgBlackBGRED,'BLU':imgBlackBGBLU}, {'RED':imgWhiteBGRED,'BLU':imgWhiteBGBLU}, outputFolder, False, True)
+					else:
+						blendThread = BlendingThread(xrotation, n, imgBlackBG, imgWhiteBG, outputFolder, False, False)
 				# Close HLMV
 				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
+				# Check for kill switch
+				killKeyState = GetKeyState(VK_CAPITAL)
+				if killKeyState in [1, -127]:
+					print '\nSuccessfully terminated'
+					sys.exit(0)
 		n += 1
-	BlendingThread.waitForAll()
+	blendThread.join()
 	# Stitch images together
 	print 'Stitching images together...'
-	for colour in paintHexDict:
-		if colour == 'Stock':
-			finalImageName = hatName + ' RED ' + '3D.jpg'
-		elif colour == 'Stock (BLU)':
-			finalImageName = hatName + ' BLU ' + '3D.jpg'
+	processes = []
+	if paint:
+		for colour in paintHexDict:
+			if colour == 'Stock':
+				if teamColours:
+					finalImageName = itemName + ' RED ' + '3D.jpg'
+				else:
+					finalImageName = itemName + ' 3D.jpg'
+			elif colour == 'Stock (BLU)':
+				if teamColours:
+					finalImageName = itemName + ' BLU ' + '3D.jpg'
+				else:
+					pass
+			else:
+				finalImageName = itemName + ' ' + paintHexDict[colour] + ' 3D.jpg'
+			##### Need to thread this #####
+			if colour == 'Stock (BLU)' and not TeamColours:
+				pass
+			else:
+				processes.append(subprocess.Popen(['python', 'stitch.py', outputFolder, paintHexDict[colour], finalImageName, str(numberOfImages)]))
+		for p in processes:
+			p.communicate()
+	else:
+		if teamColours:
+			finalREDImageName = itemName + ' RED 3D.jpg'
+			finalBLUImageName = itemName + ' BLU 3D.jpg'
+			stitch(outputFolder, ' RED', finalREDImageName, numberOfImages)
+			stitch(outputFolder, ' BLU', finalBLUImageName, numberOfImages)
 		else:
-			finalImageName = hatName + ' ' + paintHexDict[colour] + ' 3D.jpg'
-		##### Need to thread this #####
-		stitch(outputFolder, colour, finalImageName)
+			finalImageName = itemName + ' 3D.jpg'
+			stitch(outputFolder, None, finalImageName, numberOfImages)
 	# Upload images to wiki
+	if paint:
+		for colour in paintHexDict:
+			if colour == 'Stock':
+				if teamColours:
+					fileName = itemName + ' RED ' + '3D.jpg'
+				else:
+					fileName = itemName + ' 3D.jpg'
+			elif colour == 'Stock (BLU)':
+				if teamColours:
+					fileName = itemName + ' BLU ' + '3D.jpg'
+				else:
+					pass
+			else:
+				fileName = itemName + ' ' + paintHexDict[colour] + ' 3D.jpg'
+			url = fileURL(fileName)
+			description = open(outputFolder + os.sep + fileName + ' offsetmap.txt', 'rb').read()
+			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
+			if colour == 'Stock (BLU)' and not TeamColours:
+				pass
+			else:
+				uploadFile(outputFolder + os.sep + fileName, fileName, description, wikiUsername, wikiPassword, category='', overwrite=False)
+	else:
+		if teamColours:
+			finalREDImageName = itemName + ' RED 3D.jpg'
+			finalBLUImageName = itemName + ' BLU 3D.jpg'
+			url = fileURL(finalREDImageName)
+			url2 = fileURL(finalBLUImageName)
+			description = open(outputFolder + os.sep + finalREDImageName + ' offsetmap.txt', 'rb').read()
+			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
+			description2 = open(outputFolder + os.sep + finalBLUImageName + ' offsetmap.txt', 'rb').read()
+			description2 = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url2 + '</nowiki>')
+			uploadFile(outputFolder + os.sep + finalREDImageName, finalREDImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
+			uploadFile(outputFolder + os.sep + finalBLUImageName, finalBLUImageName, description2, wikiUsername, wikiPassword, category='', overwrite=False)
+		else:
+			finalImageName = itemName + ' 3D.jpg'
+			url = fileURL(finalImageName)
+			description = open(outputFolder + os.sep + finalImageName + ' offsetmap.txt', 'rb').read()
+			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
+			uploadFile(outputFolder + os.sep + finalImageName, finalImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
 	# All done yay
 	print '\nAll done'
 
 # Poot values here
-model = HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
 starttime = int(round(time.time()))
+"""
+# Two example usages
+model = HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
 automateDis(model=model,
+			numberOfImages=24,
 			n=0,
 			rotationOffset=None,
 			verticalOffset=None,
 			disableXRotation=False,
 			initialRotation=(0.000000, 0.000000, 0.000000),
 			initialTranslation=(40.320000, 0.000000, 0.000000),
-			hatName = '',
+			paint = True,
+			teamColours = True,
+			itemName = 'User Moussekateer Test',
 			REDVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap.vmt',
-			BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap_blue.vmt'
+			BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap_blue.vmt',
+			wikiUsername = 'Moussekateer',
+			wikiPassword = 'lolno'
 			)
+	
+model = HLMVModelRegistryKey('models.weapons.c_models.c_bear_claw.c_bear_claw.mdl')
+automateDis(model=model,
+			numberOfImages=1,
+			n=0,
+			rotationOffset=None,
+			verticalOffset=None,
+			disableXRotation=False,
+			initialRotation=(0.000000, 0.000000, 0.000000),
+			initialTranslation=(63.248035, 0.000000, 1.606477),
+			paint = False,
+			teamColours = True,
+			itemName = 'User Moussekateer Test',
+			REDVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\weapons\c_items\c_bear_claws_red.vmt',
+			BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\weapons\c_items\c_bear_claws_blue.vmt',
+			wikiUsername = 'Moussekateer',
+			wikiPassword = 'lolno'
+			)
+"""
 print 'completed in ' + str(int(round(time.time())) - starttime) + 'seconds'

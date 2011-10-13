@@ -1,4 +1,4 @@
-import os, Image, ImageFile
+import os, Image, ImageFile, sys
 try:
 	import psyco
 	psyco.full()
@@ -29,7 +29,7 @@ def autocrop(img):
 	cropping = (minX, minY, maxX, maxY)
 	return (img.crop(cropping).copy(), cropping)
 
-def stitch(imagesDir, outpootFile):
+def stitch(imagesDir, colour, outpootFile, numberOfImages):
 	outpootFile = imagesDir + os.sep + outpootFile
 	print 'Cropping frames...'
 	fullDimensions = (0, 0)
@@ -41,9 +41,12 @@ def stitch(imagesDir, outpootFile):
 	minTopCrop = None
 	minRightCrop = None
 	minBottomCrop = None
-	for i in xrange(24):
+	for i in xrange(numberOfImages):
 		for s in ('down', '', 'up'):
-			filename = imagesDir + os.sep + str(i) + s + '.png'
+			if colour is None:
+				filename = imagesDir + os.sep + str(i) + s + '.png'
+			else:
+				filename = imagesDir + os.sep + str(i) + s + colour + '.png'
 			print 'Processing:', filename
 			img = Image.open(filename).convert('RGBA')
 			maxFrameSize = (max(maxFrameSize[0], img.size[0]), max(maxFrameSize[1], img.size[1]))
@@ -103,7 +106,7 @@ def stitch(imagesDir, outpootFile):
 		quality -= 1
 		fullImg.save(outpootFile, 'JPEG', quality=quality, optimize=True, progressive=True)
 	print 'Saved to', outpootFile, 'with quality', quality
-	h = open(imagesDir + os.sep + 'offsetmap.txt', 'wb')
+	h = open(outpootFile + ' offsetmap.txt', 'wb')
 	h.write("""{{#switch: {{{1|}}}
   | url = <nowiki></nowiki>
   | map = \n""" + str(currentOffset) + ',' + str(rescaledMaxSize[0]) + ',' + str(finalSize[1]) + ',3,' + ','.join(offsetMap) + """\n  | width = """ + str(targetDimension) + """
@@ -112,4 +115,8 @@ def stitch(imagesDir, outpootFile):
 }}<noinclude>{{3D viewer}}[[Category:3D model images]]
 {{Externally linked}}""")
 	h.close()
-	print 'Offset map saved to ' + imagesDir + os.sep + 'offsetmap.txt'
+	print 'Offset map saved to ' + outpootFile + ' offsetmap.txt'
+
+if __name__=='__main__':
+	if len(sys.argv) > 1:
+		stitch(sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]))
