@@ -19,6 +19,7 @@ SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Laun
 monitorResolution = [1920, 1080] # The monitor resolution of the user in the form of a list; [pixel width, pixel height].
 imgCropBoundaries = (1, 42, 1919, 799) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
 fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
+threadedBlending = True # Use threading for blending computations
 
 paintDict = {'Stock': 'Stock',
 			 'An Extraordinary Abundance of Tinge': '230 230 230',
@@ -182,8 +183,19 @@ class BlendingThread(threading.Thread):
 		self.saveDir = saveDir
 		self.painted = painted
 		self.teamColours = teamColours
+		self.started = False
+	def join(self):
+		if self.started:
+			threading.Thread.__init__(self)
+	def go(self, threaded=True):
+		if threaded:
+			self.started = True
+			self.start()
+		else:
+			self.run()
+	def start(self):
 		threading.Thread.__init__(self)
-		self.start()
+		threading.Thread.start(self)
 	def run(self):
 		if self.painted:
 			for colour in self.whiteImages:
@@ -222,6 +234,22 @@ class BlendingThread(threading.Thread):
 				else:
 					imgname = str(self.n) + '.png'
 				img.save(self.saveDir + os.sep + imgname, "PNG")
+
+blendThread = None
+def blendingMachine(*args, **kwargs):
+	"""
+	Dis is blending masheen.
+	Poot things it, they get passed to BlendingThread.
+	Whether they actually run threaded or not is up to the "threadedBlending" variable up there.
+	It handles the join'ing of old threads, if it runs threaded in the first place.
+	Make sure to call blendingMachine() without arguments when the thing is done, to ensure that threads (if any) terminate.
+	"""
+	global blendThread, threadedBlending
+	if blendThread is not None:
+		blendThread.join()
+	if len(args) or len(kwargs):
+		blendThread = BlendingThread(*args, **kwargs)
+		blendThread.go(threaded=threadedBlending)
 
 def automateDis(model,
 				numberOfImages=24,
@@ -289,8 +317,6 @@ def automateDis(model,
 	model.setNormalMapping(True)
 	model.setBGColour(255, 255, 255, 255)
 	SDKLauncherCoords = None
-	blendThread = BlendingThread(0, 0, {}, {}, None, True, True)
-	
 	for yrotation in range((-180 + (360/24 * n)), 180, 360/numberOfImages):
 		print 'n =', str(n)
 		for xrotation in range(-15, 30, 15):
@@ -409,14 +435,13 @@ def automateDis(model,
 						imgBlackBG = ImageGrab.grab()
 						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
 				# Remove background from images
-				#blendThread.join()
 				if paint:
-					blendThread = BlendingThread(xrotation, n, blackBackgroundImages, whiteBackgroundImages, outputFolder, True, True)
+					blendingMachine(xrotation, n, blackBackgroundImages, whiteBackgroundImages, outputFolder, True, True)
 				else:
 					if teamColours:
-						blendThread = BlendingThread(xrotation, n, {'RED':imgBlackBGRED,'BLU':imgBlackBGBLU}, {'RED':imgWhiteBGRED,'BLU':imgWhiteBGBLU}, outputFolder, False, True)
+						blendingMachine(xrotation, n, {'RED':imgBlackBGRED,'BLU':imgBlackBGBLU}, {'RED':imgWhiteBGRED,'BLU':imgWhiteBGBLU}, outputFolder, False, True)
 					else:
-						blendThread = BlendingThread(xrotation, n, imgBlackBG, imgWhiteBG, outputFolder, False, False)
+						blendingMachine(xrotation, n, imgBlackBG, imgWhiteBG, outputFolder, False, False)
 				# Close HLMV
 				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
 				# Check for kill switch
@@ -425,7 +450,7 @@ def automateDis(model,
 					print '\nSuccessfully terminated'
 					sys.exit(0)
 		n += 1
-	blendThread.join()
+	blendingMachine() # Wait for threads to finish, if any
 	# Stitch images together
 	print 'Stitching images together...'
 	processes = []
