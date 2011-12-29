@@ -3,6 +3,7 @@ from subprocess import Popen, PIPE
 from HLMVModel import *
 from SendKeys import SendKeys
 from Stitch import *
+from threadpool import threadpool
 from uploadFile import *
 from win32con import VK_CAPITAL
 from win32api import GetKeyState
@@ -453,7 +454,7 @@ def automateDis(model,
 	blendingMachine() # Wait for threads to finish, if any
 	# Stitch images together
 	print 'Stitching images together...'
-	processes = []
+	stitchPool = threadpool(numThreads=4, defaultTarget=stitch)
 	if paint:
 		for colour in paintHexDict:
 			if colour == 'Stock':
@@ -472,18 +473,17 @@ def automateDis(model,
 			if colour == 'Stock (BLU)' and not teamColours:
 				pass
 			else:
-				processes.append(subprocess.Popen(['python', 'stitch.py', outputFolder, paintHexDict[colour], finalImageName, str(numberOfImages)]))
-		for p in processes:
-			p.communicate()
+				stitchPool(outputFolder, paintHexDict[colour], finalImageName, numberOfImages)
 	else:
 		if teamColours:
 			finalREDImageName = itemName + ' RED 3D.jpg'
 			finalBLUImageName = itemName + ' BLU 3D.jpg'
-			stitch(outputFolder, ' RED', finalREDImageName, numberOfImages)
-			stitch(outputFolder, ' BLU', finalBLUImageName, numberOfImages)
+			stitchPool(outputFolder, ' RED', finalREDImageName, numberOfImages)
+			stitchPool(outputFolder, ' BLU', finalBLUImageName, numberOfImages)
 		else:
 			finalImageName = itemName + ' 3D.jpg'
-			stitch(outputFolder, None, finalImageName, numberOfImages)
+			stitchPool(outputFolder, None, finalImageName, numberOfImages)
+	stitchPool.shutdown()
 	# Upload images to wiki
 	if paint:
 		for colour in paintHexDict:
