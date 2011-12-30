@@ -54,15 +54,22 @@ class threadpool(threading.Thread):
 					while self._task is None and not self._decommissioned:
 						self._stateChange.wait()
 					if self._task is not None:
-						(self._task[0])(*(self._task[1]), **(self._task[2]))
+						exception = None
+						task = self._task
+						try:
+							(task[1])(*(task[2]), **(task[3]))
+						except Exception, e:
+							exception = e
 						self._task = None
-						self._pool._taskFinished(self)
+						self._pool._taskFinished(self, task, exception)
 					if self._decommissioned:
 						break
 	def __init__(self, numThreads=4, defaultTarget=None):
 		self._numThreads = numThreads
 		self._defaultTarget = defaultTarget
 		self._tasks = []
+		self._exceptions = []
+		self._taskId = -1
 		self._numSpawned = 0
 		self._numBusy = 0
 		self._availableThreads = []
@@ -75,16 +82,27 @@ class threadpool(threading.Thread):
 	def add(self, target, *args, **kwargs):
 		with self._lock:
 			if not self._shuttingDown:
-				self._tasks.append((target, args, kwargs))
+				self._taskId += 1
+				self._tasks.append((self._taskId, target, args, kwargs))
 				self._taskChange.notifyAll()
+				return self._taskId
+			return None
 	def __call__(self, *args, **kwargs):
 		if self._defaultTarget is not None:
-			self.add(self._defaultTarget, *args, **kwargs)
+			return self.add(self._defaultTarget, *args, **kwargs)
 		else:
-			self.add(args[0], *(args[1:]), **kwargs)
-	def _taskFinished(self, thread):
+			return self.add(args[0], *(args[1:]), **kwargs)
+	def _taskFinished(self, thread, task, exception):
 		with self._lock:
 			self._availableThreads.append(thread)
+			if exception is not None:
+				self._exceptions.append({
+					'id': task[0],
+					'target': task[1],
+					'args': task[2],
+					'kwargs': task[3],
+					'exception': exception
+				})
 			self._numBusy -= 1
 			self._taskChange.notifyAll()
 	def shutdown(self, blocking=True):
@@ -93,6 +111,7 @@ class threadpool(threading.Thread):
 			self._taskChange.notifyAll()
 			if blocking:
 				self._shutdownCondition.wait()
+			return self._exceptions
 	def _getWorkers(self, desired):
 		freeWorkers = []
 		with self._lock:
@@ -134,14 +153,19 @@ if __name__ == '__main__':
 	def dummyTask(i, t):
 		p('Task', i, 'started (sleeping', t, 'seconds).')
 		time.sleep(t)
+		if random.randint(0, 4) == 2:
+			p('Task', i, 'raising a random exception.')
+			raise Exception('Random exception')
 		p('Task', i, 'finished (sleeping', t, 'seconds).')
 	pool = threadpool(numThreads=2, defaultTarget=dummyTask)
 	for i in xrange(8):
 		t = random.randint(3, 20)
-		p('Task', i, 'adding (sleeping', t, 'seconds).')
-		pool(i, t)
 		p('Task', i, 'added (sleeping', t, 'seconds).')
+		pool(i, t)
 		time.sleep(random.randint(0, 2))
 	p('Done adding tasks.')
-	pool.shutdown()
+	exceptions = pool.shutdown()
 	p('Pool has shut down.')
+	p('Exceptions received:')
+	for e in exceptions:
+		p('Task', e['id'], 'raised', e['exception'])
