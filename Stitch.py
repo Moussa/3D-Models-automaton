@@ -8,26 +8,7 @@ except:
 targetDimension = 280
 targetSize = 512 * 1024 # 512 KB
 
-def autocrop(img):
-	load = img.load()
-	minX = None
-	minY = img.size[1]
-	maxX = 0
-	maxY = 0
-	for x in xrange(img.size[0]):
-		yTransparent = True
-		for y in xrange(img.size[1]):
-			if load[x, y][3] != 0:
-				if minX is None:
-					minX = x
-				if yTransparent:
-					# Then now is first non-transparent pixel on column y
-					yTransparent = False
-					minY = min(minY, y)
-				maxX = max(maxX, x)
-				maxY = max(maxY, y)
-	cropping = (minX, minY, maxX, maxY)
-	return (img.crop(cropping).copy(), cropping)
+from autocrop import autocrop
 
 def stitch(imagesDir, colour, outpootFile, numberOfImages):
 	outpootFile = imagesDir + os.sep + outpootFile
