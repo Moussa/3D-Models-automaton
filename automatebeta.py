@@ -187,7 +187,7 @@ class BlendingThread(threading.Thread):
 		self.started = False
 	def join(self):
 		if self.started:
-			threading.Thread.__init__(self)
+			threading.Thread.join(self)
 	def go(self, threaded=True):
 		if threaded:
 			self.started = True
