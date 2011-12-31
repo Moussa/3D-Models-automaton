@@ -1,8 +1,9 @@
-import mouse, Image, ImageGrab, os, subprocess, math, imgpie, threading, time
+import mouse, Image, os, subprocess, math, imgpie, threading, time
 from subprocess import Popen, PIPE
 from HLMVModel import *
 from SendKeys import SendKeys
 from Stitch import *
+from screenshot import screenshot
 from threadpool import threadpool
 from uploadFile import *
 from win32con import VK_CAPITAL
@@ -360,7 +361,7 @@ def automateDis(model,
 						paintHat(dict[colour], REDVMTFile)
 						SendKeys(r'{F5}')
 						mouse.sleep(0.1)
-						imgWhiteBG = ImageGrab.grab()
+						imgWhiteBG = screenshot()
 						imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
 						whiteBackgroundImages[colour] = imgWhiteBG
 					# Change BG colour to black
@@ -370,7 +371,7 @@ def automateDis(model,
 						paintHat(dict[colour], REDVMTFile)
 						SendKeys(r'{F5}')
 						mouse.sleep(0.1)
-						imgBlackBG = ImageGrab.grab()
+						imgBlackBG = screenshot()
 						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
 						blackBackgroundImages[colour] = imgBlackBG
 					SendKeys(r'^b')
@@ -396,12 +397,12 @@ def automateDis(model,
 				else:
 					if teamColours:
 						# Take whiteBG screenshot and crop
-						imgWhiteBGRED = ImageGrab.grab()
+						imgWhiteBGRED = screenshot()
 						imgWhiteBGRED = imgWhiteBGRED.crop(imgCropBoundaries)
 						# Change BG colour to black
 						SendKeys(r'^b')
 						# Take blackBG screenshot and crop
-						imgBlackBGRED = ImageGrab.grab()
+						imgBlackBGRED = screenshot()
 						imgBlackBGRED = imgBlackBGRED.crop(imgCropBoundaries)
 						# Change BG colour to white
 						SendKeys(r'^b')
@@ -414,12 +415,12 @@ def automateDis(model,
 						SendKeys(r'{F5}')
 						mouse.sleep(0.1)
 						# Take whiteBG screenshot and crop
-						imgWhiteBGBLU = ImageGrab.grab()
+						imgWhiteBGBLU = screenshot()
 						imgWhiteBGBLU = imgWhiteBGBLU.crop(imgCropBoundaries)
 						# Change BG colour to black
 						SendKeys(r'^b')
 						# Take blackBG screenshot and crop
-						imgBlackBGBLU = ImageGrab.grab()
+						imgBlackBGBLU = screenshot()
 						imgBlackBGBLU = imgBlackBGBLU.crop(imgCropBoundaries)
 						# Return VMT back to RED
 						g = open(REDVMTFile, 'wb')
@@ -427,12 +428,12 @@ def automateDis(model,
 						g.close()
 					else:
 						# Take whiteBG screenshot and crop
-						imgWhiteBG = ImageGrab.grab()
+						imgWhiteBG = screenshot()
 						imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
 						# Change BG colour to black
 						SendKeys(r'^b')
 						# Take blackBG screenshot and crop
-						imgBlackBG = ImageGrab.grab()
+						imgBlackBG = screenshot()
 						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
 				# Remove background from images
 				if paint:
