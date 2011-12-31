@@ -51,7 +51,7 @@ def stitch(imagesDir, colour, outpootFile, numberOfImages):
 				minBottomCrop = bottomCrop
 			fullDimensions = (fullDimensions[0] + newI.size[0], max(fullDimensions[1], newI.size[1]))
 	# This pool should NOT use multiprocessing in order to avoid copying huge image objects around from process to process
-	cropPool = threadpool.threadpool(numThreads=6, defaultTarget=cropTask, multiprocessing=False)
+	cropPool = threadpool.threadpool(numThreads=6, defaultTarget=cropTask, multiprocess=False)
 	for i in xrange(numberOfImages):
 		for s in ('down', '', 'up'):
 			cropPool(i, s)

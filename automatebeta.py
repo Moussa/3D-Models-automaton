@@ -286,8 +286,6 @@ def automateDis(model,
 				wikiUsername -> wiki.tf2.com username. Optional, default is none.
 				wikiPassword -> wiki.tf2.com password. Optional, default is none.
 	"""
-	if __name__ != '__main__':
-		return
 	folder = raw_input('Folder name for created images: ')
 	outputFolder = outputImagesDir + os.sep + folder
 	try:
@@ -528,44 +526,45 @@ def automateDis(model,
 	# All done yay
 	print '\nAll done'
 
-# Poot values here
-starttime = int(round(time.time()))
-"""
-# Two example usages
-model = HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
-automateDis(model=model,
-			numberOfImages=24,
-			n=0,
-			rotationOffset=None,
-			verticalOffset=None,
-			disableXRotation=False,
-			initialRotation=(0.000000, 0.000000, 0.000000),
-			initialTranslation=(40.320000, 0.000000, 0.000000),
-			paint = True,
-			teamColours = True,
-			itemName = 'User Moussekateer Test',
-			REDVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap.vmt',
-			BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap_blue.vmt',
-			wikiUsername = 'Moussekateer',
-			wikiPassword = 'lolno'
-			)
-	
-model = HLMVModelRegistryKey('models.weapons.c_models.c_bear_claw.c_bear_claw.mdl')
-automateDis(model=model,
-			numberOfImages=1,
-			n=0,
-			rotationOffset=None,
-			verticalOffset=None,
-			disableXRotation=False,
-			initialRotation=(0.000000, 0.000000, 0.000000),
-			initialTranslation=(63.248035, 0.000000, 1.606477),
-			paint = False,
-			teamColours = True,
-			itemName = 'User Moussekateer Test',
-			REDVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\weapons\c_items\c_bear_claws_red.vmt',
-			BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\weapons\c_items\c_bear_claws_blue.vmt',
-			wikiUsername = 'Moussekateer',
-			wikiPassword = 'lolno'
-			)
-"""
-print 'completed in ' + str(int(round(time.time())) - starttime) + 'seconds'
+if __name__ == '__main__':
+	# Poot values here
+	starttime = int(round(time.time()))
+	"""
+	# Two example usages
+	model = HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
+	automateDis(model=model,
+				numberOfImages=24,
+				n=0,
+				rotationOffset=None,
+				verticalOffset=None,
+				disableXRotation=False,
+				initialRotation=(0.000000, 0.000000, 0.000000),
+				initialTranslation=(40.320000, 0.000000, 0.000000),
+				paint = True,
+				teamColours = True,
+				itemName = 'User Moussekateer Test',
+				REDVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap.vmt',
+				BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap_blue.vmt',
+				wikiUsername = 'Moussekateer',
+				wikiPassword = 'lolno'
+				)
+		
+	model = HLMVModelRegistryKey('models.weapons.c_models.c_bear_claw.c_bear_claw.mdl')
+	automateDis(model=model,
+				numberOfImages=1,
+				n=0,
+				rotationOffset=None,
+				verticalOffset=None,
+				disableXRotation=False,
+				initialRotation=(0.000000, 0.000000, 0.000000),
+				initialTranslation=(63.248035, 0.000000, 1.606477),
+				paint = False,
+				teamColours = True,
+				itemName = 'User Moussekateer Test',
+				REDVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\weapons\c_items\c_bear_claws_red.vmt',
+				BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\weapons\c_items\c_bear_claws_blue.vmt',
+				wikiUsername = 'Moussekateer',
+				wikiPassword = 'lolno'
+				)
+	"""
+	print 'completed in ' + str(int(round(time.time())) - starttime) + 'seconds'
