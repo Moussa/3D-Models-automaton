@@ -286,7 +286,8 @@ def automateDis(model,
 				wikiUsername -> wiki.tf2.com username. Optional, default is none.
 				wikiPassword -> wiki.tf2.com password. Optional, default is none.
 	"""
-	
+	if __name__ != '__main__':
+		return
 	folder = raw_input('Folder name for created images: ')
 	outputFolder = outputImagesDir + os.sep + folder
 	try:
