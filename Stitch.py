@@ -39,25 +39,30 @@ def stitch(imagesDir, colour, outpootFile, numberOfImages):
 				filename = imagesDir + os.sep + str(i) + s + colour + '.png'
 			cropPool(i, s, filename)
 	results = cropPool.shutdown()
+	orderedResults = {}
 	for result in results:
 		if result['exception'] is not None:
 			raise result['exception']
 		i, s, size, newI, cropping = result['result']
-		maxFrameSize = (max(maxFrameSize[0], size[0]), max(maxFrameSize[1], size[1]))
-		cropped.append(newI)
-		croppedNames[newI] = filename
-		crops[newI] = cropping
-		if minLeftCrop is None or cropping[0] < minLeftCrop:
-			minLeftCrop = cropping[0]
-		if minTopCrop is None or cropping[1] < minTopCrop:
-			minTopCrop = cropping[1]
-		rightCrop = size[0] - cropping[2]
-		if minRightCrop is None or rightCrop < minRightCrop:
-			minRightCrop = rightCrop
-		bottomCrop = size[1] - cropping[3]
-		if minBottomCrop is None or bottomCrop < minBottomCrop:
-			minBottomCrop = bottomCrop
-		fullDimensions = (fullDimensions[0] + newI.size[0], max(fullDimensions[1], newI.size[1]))
+		orderedResults[(i, s)] = (size, newI, cropping)
+	for i in xrange(numberOfImages):
+		for s in ('down', '', 'up'):
+			size, newI, cropping = orderedResults[(i, s)]
+			maxFrameSize = (max(maxFrameSize[0], size[0]), max(maxFrameSize[1], size[1]))
+			cropped.append(newI)
+			croppedNames[newI] = filename
+			crops[newI] = cropping
+			if minLeftCrop is None or cropping[0] < minLeftCrop:
+				minLeftCrop = cropping[0]
+			if minTopCrop is None or cropping[1] < minTopCrop:
+				minTopCrop = cropping[1]
+			rightCrop = size[0] - cropping[2]
+			if minRightCrop is None or rightCrop < minRightCrop:
+				minRightCrop = rightCrop
+			bottomCrop = size[1] - cropping[3]
+			if minBottomCrop is None or bottomCrop < minBottomCrop:
+				minBottomCrop = bottomCrop
+			fullDimensions = (fullDimensions[0] + newI.size[0], max(fullDimensions[1], newI.size[1]))
 	print 'Minimum crop size:', (minLeftCrop, minTopCrop, minRightCrop, minBottomCrop)
 	maxFrameSize = (maxFrameSize[0] - minLeftCrop - minRightCrop, maxFrameSize[1] - minTopCrop - minBottomCrop)
 	print 'Max frame size, including cropped area:', maxFrameSize
