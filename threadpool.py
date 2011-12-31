@@ -76,8 +76,8 @@ class _threadpool(threading.Thread):
 					if self._decommissioned:
 						break
 	def __init__(self, numThreads=4, defaultTarget=None):
+		self._numThreads = numThreads
 		self._defaultTarget = defaultTarget
-		self._multiProcess = multiprocess
 		self._tasks = []
 		self._results = []
 		self._taskId = -1
@@ -124,7 +124,7 @@ class _threadpool(threading.Thread):
 			if desired > len(freeWorkers) and self._numSpawned < self._numThreads:
 				newWorkers = min(desired - len(freeWorkers), self._numThreads - self._numSpawned)
 				for i in xrange(newWorkers):
-					freeWorkers.append(threadpool._poolworker(self))
+					freeWorkers.append(_threadpool._poolworker(self))
 				self._numSpawned += newWorkers
 		return freeWorkers
 	def run(self):
@@ -203,7 +203,7 @@ if __name__ == '__main__':
 		returnVal = random.randint(0, 99999)
 		p('Task', i, 'finished (sleeping', t, 'seconds), and returning value', returnVal)
 		return returnVal
-	pool = threadpool(numThreads=2, defaultTarget=dummyTask)
+	pool = threadpool(numThreads=2, defaultTarget=dummyTask, multiprocess=False)
 	for i in xrange(8):
 		t = random.randint(3, 20)
 		p('Task', i, 'added (sleeping', t, 'seconds).')
