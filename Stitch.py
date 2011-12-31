@@ -11,6 +11,12 @@ targetSize = 512 * 1024 # 512 KB
 from autocrop import autocrop
 import threadpool
 
+def cropTask(i, s, filename):
+	print 'Processing:', filename
+	img = Image.open(filename).convert('RGBA')
+	newI, cropping = autocrop(img)
+	return i, s, img.size[:], newI, cropping
+
 def stitch(imagesDir, colour, outpootFile, numberOfImages):
 	outpootFile = imagesDir + os.sep + outpootFile
 	print 'Cropping frames...'
@@ -23,21 +29,15 @@ def stitch(imagesDir, colour, outpootFile, numberOfImages):
 	minTopCrop = None
 	minRightCrop = None
 	minBottomCrop = None
-	def cropTask(i, s):
-		global colour
-		if colour is None:
-			filename = imagesDir + os.sep + str(i) + s + '.png'
-		else:
-			filename = imagesDir + os.sep + str(i) + s + colour + '.png'
-		print 'Processing:', filename
-		img = Image.open(filename).convert('RGBA')
-		newI, cropping = autocrop(img)
-		return i, s, img.size[:], newI, cropping
 	# This pool should NOT use multiprocessing in order to avoid copying huge image objects around from process to process
 	cropPool = threadpool.threadpool(numThreads=6, defaultTarget=cropTask, multiprocess=False)
 	for i in xrange(numberOfImages):
 		for s in ('down', '', 'up'):
-			cropPool(i, s)
+			if colour is None:
+				filename = imagesDir + os.sep + str(i) + s + '.png'
+			else:
+				filename = imagesDir + os.sep + str(i) + s + colour + '.png'
+			cropPool(i, s, filename)
 	results = cropPool.shutdown()
 	for result in results:
 		if result['exception'] is not None:
