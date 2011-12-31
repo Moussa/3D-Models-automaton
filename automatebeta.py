@@ -289,7 +289,7 @@ def automateDis(model,
 	folder = raw_input('Folder name for created images: ')
 	outputFolder = outputImagesDir + os.sep + folder
 	try:
-		os.mkdir(outputFolder)
+		os.makedirs(outputFolder)
 	except:
 		answer = raw_input('Folder already exists, overwrite files? y\\n? ')
 		if answer == 'yes' or answer == 'y':
@@ -317,7 +317,7 @@ def automateDis(model,
 	model.setNormalMapping(True)
 	model.setBGColour(255, 255, 255, 255)
 	SDKLauncherCoords = None
-	for yrotation in range((-180 + (360/24 * n)), 180, 360/numberOfImages):
+	for yrotation in range((-180 + (360/numberOfImages * n)), 180, 360/numberOfImages):
 		print 'n =', str(n)
 		for xrotation in range(-15, 30, 15):
 			if (disableXRotation and xrotation == 0) or not disableXRotation:
