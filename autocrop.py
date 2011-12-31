@@ -1,29 +1,14 @@
-import Image
+import Image, numpy
 try:
 	import psyco
 	psyco.full()
 except:
 	pass
 
+_imageDtype = numpy.dtype('i')
 def autocrop(img):
-	sizeX = img.size[0]
-	sizeY = img.size[1]
-	load = img.load()
-	minX = -1
-	minY = sizeY
-	maxX = 0
-	maxY = 0
-	yRange = xrange(sizeY)
-	for x in xrange(sizeX):
-		yTransparent = 1
-		for y in yRange:
-			if load[x, y][3] != 0:
-				if minX == -1:
-					minX = x
-				if yTransparent:
-					yTransparent = 0
-					minY = min(minY, y)
-				maxX = max(maxX, x)
-				maxY = max(maxY, y)
-	cropping = (minX, minY, maxX, maxY)
+	alpha = numpy.array(img, dtype=_imageDtype)[:,:,3]
+	horizontal = alpha.any(axis=0).nonzero()[0]
+	vertical = alpha.any(axis=1).nonzero()[0]
+	cropping = (horizontal[0], vertical[0], horizontal[-1], vertical[-1])
 	return (img.crop(cropping), cropping)
