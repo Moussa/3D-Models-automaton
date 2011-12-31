@@ -454,7 +454,7 @@ def automateDis(model,
 	blendingMachine() # Wait for threads to finish, if any
 	# Stitch images together
 	print 'Stitching images together...'
-	stitchPool = threadpool(numThreads=4, defaultTarget=stitch)
+	stitchPool = threadpool(numThreads=2, defaultTarget=stitch)
 	if paint:
 		for colour in paintHexDict:
 			if colour == 'Stock':

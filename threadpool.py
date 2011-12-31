@@ -27,9 +27,19 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import threading
+import multiprocessing, threading
 
-class threadpool(threading.Thread):
+def _getResult(task, result, exception):
+	return {
+		'id': task[0],
+		'target': task[1],
+		'args': task[2],
+		'kwargs': task[3],
+		'result': result,
+		'exception': exception
+	}
+
+class _threadpool(threading.Thread):
 	class _poolworker(threading.Thread):
 		def __init__(self, pool):
 			self._pool = pool
@@ -54,21 +64,22 @@ class threadpool(threading.Thread):
 					while self._task is None and not self._decommissioned:
 						self._stateChange.wait()
 					if self._task is not None:
+						result = None
 						exception = None
 						task = self._task
 						try:
-							(task[1])(*(task[2]), **(task[3]))
+							result = (task[1])(*(task[2]), **(task[3]))
 						except Exception, e:
 							exception = e
 						self._task = None
-						self._pool._taskFinished(self, task, exception)
+						self._pool._taskFinished(self, task, result, exception)
 					if self._decommissioned:
 						break
 	def __init__(self, numThreads=4, defaultTarget=None):
-		self._numThreads = numThreads
 		self._defaultTarget = defaultTarget
+		self._multiProcess = multiprocess
 		self._tasks = []
-		self._exceptions = []
+		self._results = []
 		self._taskId = -1
 		self._numSpawned = 0
 		self._numBusy = 0
@@ -92,26 +103,18 @@ class threadpool(threading.Thread):
 			return self.add(self._defaultTarget, *args, **kwargs)
 		else:
 			return self.add(args[0], *(args[1:]), **kwargs)
-	def _taskFinished(self, thread, task, exception):
+	def _taskFinished(self, thread, task, result, exception):
 		with self._lock:
 			self._availableThreads.append(thread)
-			if exception is not None:
-				self._exceptions.append({
-					'id': task[0],
-					'target': task[1],
-					'args': task[2],
-					'kwargs': task[3],
-					'exception': exception
-				})
+			self._results.append(_getResult(task, result, exception))
 			self._numBusy -= 1
 			self._taskChange.notifyAll()
-	def shutdown(self, blocking=True):
+	def shutdown(self):
 		with self._lock:
 			self._shuttingDown = True
 			self._taskChange.notifyAll()
-			if blocking:
-				self._shutdownCondition.wait()
-			return self._exceptions
+			self._shutdownCondition.wait()
+			return self._results
 	def _getWorkers(self, desired):
 		freeWorkers = []
 		with self._lock:
@@ -139,6 +142,47 @@ class threadpool(threading.Thread):
 					self._shutdownCondition.notifyAll()
 					break
 
+class _multiprocessingpool:
+	def __init__(self, numThreads=4, defaultTarget=None):
+		self._defaultTarget = defaultTarget
+		self._pool = multiprocessing.Pool(numThreads)
+		self._lock = threading.RLock()
+		self._shuttingDown = False
+		self._tasks = []
+		self._results = []
+		self._taskId = -1
+	def add(self, target, *args, **kwargs):
+		with self._lock:
+			if not self._shuttingDown:
+				self._taskId += 1
+				self._tasks.append((self._taskId, target, args, kwargs))
+				self._results.append(self._pool.apply_async(target, args, kwargs))
+				return self._taskId
+			return None
+	def __call__(self, *args, **kwargs):
+		if self._defaultTarget is not None:
+			return self.add(self._defaultTarget, *args, **kwargs)
+		else:
+			return self.add(args[0], *(args[1:]), **kwargs)
+	def shutdown(self):
+		with self._lock:
+			self._shuttingDown = True
+			self._pool.close()
+			self._pool.join()
+			newResults = []
+			for task in self._tasks:
+				try:
+					result = self._results[task[0]].get()
+					newResults.append(_getResult(task, result, None))
+				except Exception, e:
+					newResults.append(_getResult(task, None, e))
+			return newResults
+
+def threadpool(numThreads=4, defaultTarget=None, multiprocess=True):
+	if multiprocess:
+		return _multiprocessingpool(numThreads=numThreads, defaultTarget=defaultTarget)
+	return _threadpool(numThreads=numThreads, defaultTarget=defaultTarget)
+
 if __name__ == '__main__':
 	import sys, time, random
 	printLock = threading.RLock()
@@ -156,7 +200,9 @@ if __name__ == '__main__':
 		if random.randint(0, 4) == 2:
 			p('Task', i, 'raising a random exception.')
 			raise Exception('Random exception')
-		p('Task', i, 'finished (sleeping', t, 'seconds).')
+		returnVal = random.randint(0, 99999)
+		p('Task', i, 'finished (sleeping', t, 'seconds), and returning value', returnVal)
+		return returnVal
 	pool = threadpool(numThreads=2, defaultTarget=dummyTask)
 	for i in xrange(8):
 		t = random.randint(3, 20)
@@ -164,8 +210,11 @@ if __name__ == '__main__':
 		pool(i, t)
 		time.sleep(random.randint(0, 2))
 	p('Done adding tasks.')
-	exceptions = pool.shutdown()
+	results = pool.shutdown()
 	p('Pool has shut down.')
-	p('Exceptions received:')
-	for e in exceptions:
-		p('Task', e['id'], 'raised', e['exception'])
+	p('Results:')
+	for r in results:
+		if r['exception'] is None:
+			p('Task', r['id'], 'returned', r['result'])
+		else:
+			p('Task', r['id'], 'raised', r['exception'])

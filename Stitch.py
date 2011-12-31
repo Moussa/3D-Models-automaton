@@ -1,4 +1,4 @@
-import os, Image, ImageFile, sys
+import os, Image, ImageFile, sys, threading
 try:
 	import psyco
 	psyco.full()
@@ -9,6 +9,7 @@ targetDimension = 280
 targetSize = 512 * 1024 # 512 KB
 
 from autocrop import autocrop
+import threadpool
 
 def stitch(imagesDir, colour, outpootFile, numberOfImages):
 	outpootFile = imagesDir + os.sep + outpootFile
@@ -22,16 +23,19 @@ def stitch(imagesDir, colour, outpootFile, numberOfImages):
 	minTopCrop = None
 	minRightCrop = None
 	minBottomCrop = None
-	for i in xrange(numberOfImages):
-		for s in ('down', '', 'up'):
-			if colour is None:
-				filename = imagesDir + os.sep + str(i) + s + '.png'
-			else:
-				filename = imagesDir + os.sep + str(i) + s + colour + '.png'
+	cropLock = threading.RLock()
+	def cropTask(i, s):
+		global cropLock, colour, maxFrameSize, crops, cropped, croppedNames, minLeftCrop, minTopCrop, minRightCrop, minBottomCrop, fullDimensions
+		if colour is None:
+			filename = imagesDir + os.sep + str(i) + s + '.png'
+		else:
+			filename = imagesDir + os.sep + str(i) + s + colour + '.png'
+		with cropLock:
 			print 'Processing:', filename
-			img = Image.open(filename).convert('RGBA')
+		img = Image.open(filename).convert('RGBA')
+		newI, cropping = autocrop(img)
+		with cropLock:
 			maxFrameSize = (max(maxFrameSize[0], img.size[0]), max(maxFrameSize[1], img.size[1]))
-			newI, cropping = autocrop(img)
 			cropped.append(newI)
 			croppedNames[newI] = filename
 			crops[newI] = cropping
@@ -46,6 +50,12 @@ def stitch(imagesDir, colour, outpootFile, numberOfImages):
 			if minBottomCrop is None or bottomCrop < minBottomCrop:
 				minBottomCrop = bottomCrop
 			fullDimensions = (fullDimensions[0] + newI.size[0], max(fullDimensions[1], newI.size[1]))
+	# This pool should NOT use multiprocessing in order to avoid copying huge image objects around from process to process
+	cropPool = threadpool.threadpool(numThreads=6, defaultTarget=cropTask, multiprocessing=False)
+	for i in xrange(numberOfImages):
+		for s in ('down', '', 'up'):
+			cropPool(i, s)
+	cropPool.shutdown()
 	print 'Minimum crop size:', (minLeftCrop, minTopCrop, minRightCrop, minBottomCrop)
 	maxFrameSize = (maxFrameSize[0] - minLeftCrop - minRightCrop, maxFrameSize[1] - minTopCrop - minBottomCrop)
 	print 'Max frame size, including cropped area:', maxFrameSize
