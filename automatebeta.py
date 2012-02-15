@@ -515,7 +515,7 @@ def automateDis(model,
 			description = open(outputFolder + os.sep + finalREDImageName + ' offsetmap.txt', 'rb').read()
 			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
 			description2 = open(outputFolder + os.sep + finalBLUImageName + ' offsetmap.txt', 'rb').read()
-			description2 = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url2 + '</nowiki>')
+			description2 = description2.replace('url = <nowiki></nowiki>','url = <nowiki>' + url2 + '</nowiki>')
 			uploadFile(outputFolder + os.sep + finalREDImageName, finalREDImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
 			uploadFile(outputFolder + os.sep + finalBLUImageName, finalBLUImageName, description2, wikiUsername, wikiPassword, category='', overwrite=False)
 		else:
