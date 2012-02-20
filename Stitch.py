@@ -17,7 +17,7 @@ def cropTask(i, s, filename):
 	newI, cropping = autocrop(img)
 	return i, s, img.size[:], newI, cropping
 
-def stitch(imagesDir, colour, outpootFile, numberOfImages):
+def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 	outpootFile = imagesDir + os.sep + outpootFile
 	print 'Cropping frames...'
 	fullDimensions = (0, 0)
@@ -31,12 +31,12 @@ def stitch(imagesDir, colour, outpootFile, numberOfImages):
 	minBottomCrop = None
 	# This pool should NOT use multiprocessing in order to avoid copying huge image objects around from process to process
 	cropPool = threadpool.threadpool(numThreads=6, defaultTarget=cropTask, multiprocess=False)
-	for i in xrange(numberOfImages):
-		for s in ('down', '', 'up'):
+	for i in xrange(yRotNum):
+		for s in xrange(-xRotNum, xRotNum + 1):
 			if colour is None:
-				filename = imagesDir + os.sep + str(i) + s + '.png'
+				filename = imagesDir + os.sep + str(i) + '_' + str(s) + '.png'
 			else:
-				filename = imagesDir + os.sep + str(i) + s + colour + '.png'
+				filename = imagesDir + os.sep + str(i) + '_' + str(s) + colour + '.png'
 			cropPool(i, s, filename)
 	results = cropPool.shutdown()
 	orderedResults = {}
@@ -45,8 +45,8 @@ def stitch(imagesDir, colour, outpootFile, numberOfImages):
 			raise result['exception']
 		i, s, size, newI, cropping = result['result']
 		orderedResults[(i, s)] = (size, newI, cropping)
-	for i in xrange(numberOfImages):
-		for s in ('down', '', 'up'):
+	for i in xrange(yRotNum):
+		for s in xrange(-xRotNum, xRotNum + 1):
 			size, newI, cropping = orderedResults[(i, s)]
 			maxFrameSize = (max(maxFrameSize[0], size[0]), max(maxFrameSize[1], size[1]))
 			cropped.append(newI)
@@ -107,7 +107,7 @@ def stitch(imagesDir, colour, outpootFile, numberOfImages):
 	h = open(outpootFile + ' offsetmap.txt', 'wb')
 	h.write("""{{#switch: {{{1|}}}
   | url = <nowiki></nowiki>
-  | map = \n""" + str(currentOffset) + ',' + str(rescaledMaxSize[0]) + ',' + str(finalSize[1]) + ',3,' + ','.join(offsetMap) + """\n  | width = """ + str(targetDimension) + """
+  | map = \n""" + str(currentOffset) + ',' + str(rescaledMaxSize[0]) + ',' + str(finalSize[1]) + ',' + str(xRotNum * 2 + 1) + ',' + ','.join(offsetMap) + """\n  | width = """ + str(targetDimension) + """
   | height = """ + str(targetDimension) + """
   | startframe = 16
 }}<noinclude>{{3D viewer}}[[Category:3D model images]]
