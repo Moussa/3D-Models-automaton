@@ -203,11 +203,11 @@ class BlendingThread(threading.Thread):
 			for colour in self.whiteImages:
 				print 'Processing ' + colour
 				if self.xrotation == -15:
-					imgname = str(self.n) + 'up' + paintHexDict[colour] + '.png'
+					imgname = str(self.n) + '_1' + paintHexDict[colour] + '.png'
 				elif self.xrotation == 15:
-					imgname = str(self.n) + 'down' + paintHexDict[colour] + '.png'
+					imgname = str(self.n) + '_-1' + paintHexDict[colour] + '.png'
 				else:
-					imgname = str(self.n) + '' + paintHexDict[colour] + '.png'
+					imgname = str(self.n) + '_0' + paintHexDict[colour] + '.png'
 				black = imgpie.wrap(self.blackImages[colour])
 				white = imgpie.wrap(self.whiteImages[colour])
 				blended = black.blackWhiteBlend(white)
@@ -217,24 +217,24 @@ class BlendingThread(threading.Thread):
 				img = toAlphaBlackWhite(self.blackImages['RED'], self.whiteImages['RED'])
 				img2 = toAlphaBlackWhite(self.blackImages['BLU'], self.whiteImages['BLU'])
 				if self.xrotation == -15:
-					imgname = str(self.n) + 'up RED.png'
-					imgname2 = str(self.n) + 'up BLU.png'
+					imgname = str(self.n) + '_1_RED.png'
+					imgname2 = str(self.n) + '_1_BLU.png'
 				elif self.xrotation == 15:
-					imgname = str(self.n) + 'down RED.png'
-					imgname2 = str(self.n) + 'down BLU.png'
+					imgname = str(self.n) + '_-1_RED.png'
+					imgname2 = str(self.n) + '_-1_BLU.png'
 				else:
-					imgname = str(self.n) + ' RED.png'
-					imgname2 = str(self.n) + ' BLU.png'
+					imgname = str(self.n) + '_RED.png'
+					imgname2 = str(self.n) + '_BLU.png'
 				img.save(self.saveDir + os.sep + imgname, "PNG")
 				img2.save(self.saveDir + os.sep + imgname2, "PNG")
 			else:
 				img = toAlphaBlackWhite(self.blackImages, self.whiteImages)
 				if self.xrotation == -15:
-					imgname = str(self.n) + 'up.png'
+					imgname = str(self.n) + '_1.png'
 				elif self.xrotation == 15:
-					imgname = str(self.n) + 'down.png'
+					imgname = str(self.n) + '_-1.png'
 				else:
-					imgname = str(self.n) + '.png'
+					imgname = str(self.n) + '_0.png'
 				img.save(self.saveDir + os.sep + imgname, "PNG")
 
 blendThread = None
@@ -260,7 +260,7 @@ def automateDis(model,
 				initialRotation=None,
 				initialTranslation=None,
 				verticalOffset=None,
-				disableXRotation=False,
+				verticalRotations=1,
 				paint=False,
 				teamColours=False,
 				itemName='',
@@ -278,7 +278,7 @@ def automateDis(model,
 				initialRotation -> The initial model rotation as a tuple. Optional, default is (0 0 0).
 				initialTranslation -> The initial model translation as a tuple. Optional, default is (0 0 0).
 				verticalOffset -> The vertical offset for models that are centered in both other planes but not vertically. Optional, default is none.
-				disableXRotation -> Boolean that disables tilting. Default is False.
+				verticalRotations -> Int number where 1 = up/down rotations and 0 = no vertical rotations. Default is 1.
 				paint -> Boolean to indicate whether model is paintable. Optional, default is False.
 				teamColours -> Boolean to indicate whether model is team coloured. Optional, default is False.
 				itemName -> The name of the item. Optional, default is blank.
@@ -321,7 +321,7 @@ def automateDis(model,
 	for yrotation in range((-180 + (360/numberOfImages * n)), 180, 360/numberOfImages):
 		print 'n =', str(n)
 		for xrotation in range(-15, 30, 15):
-			if (disableXRotation and xrotation == 0) or not disableXRotation:
+			if (verticalRotations == 0 and xrotation == 0) or verticalRotations == 1:
 				# Set rotation
 				mouse.sleep(0.5)
 				model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]), z = initialRotation[2])
@@ -473,18 +473,19 @@ def automateDis(model,
 			if colour == 'Stock (BLU)' and not teamColours:
 				pass
 			else:
-				stitchPool(outputFolder, paintHexDict[colour], finalImageName, numberOfImages)
+				stitchPool(outputFolder, paintHexDict[colour], finalImageName, numberOfImages, verticalRotations)
 	else:
 		if teamColours:
 			finalREDImageName = itemName + ' RED 3D.jpg'
 			finalBLUImageName = itemName + ' BLU 3D.jpg'
-			stitchPool(outputFolder, ' RED', finalREDImageName, numberOfImages)
-			stitchPool(outputFolder, ' BLU', finalBLUImageName, numberOfImages)
+			stitchPool(outputFolder, ' RED', finalREDImageName, numberOfImages, verticalRotations)
+			stitchPool(outputFolder, ' BLU', finalBLUImageName, numberOfImages, verticalRotations)
 		else:
 			finalImageName = itemName + ' 3D.jpg'
-			stitchPool(outputFolder, None, finalImageName, numberOfImages)
+			stitchPool(outputFolder, None, finalImageName, numberOfImages, verticalRotations)
 	stitchPool.shutdown()
 	# Upload images to wiki
+	time.sleep(10)
 	if paint:
 		for colour in paintHexDict:
 			if colour == 'Stock':
@@ -530,7 +531,7 @@ def automateDis(model,
 if __name__ == '__main__':
 	# Poot values here
 	starttime = int(round(time.time()))
-	"""
+	
 	# Two example usages
 	model = HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
 	automateDis(model=model,
@@ -538,7 +539,7 @@ if __name__ == '__main__':
 				n=0,
 				rotationOffset=None,
 				verticalOffset=None,
-				disableXRotation=False,
+				verticalRotations=1,
 				initialRotation=(0.000000, 0.000000, 0.000000),
 				initialTranslation=(40.320000, 0.000000, 0.000000),
 				paint = True,
@@ -549,14 +550,14 @@ if __name__ == '__main__':
 				wikiUsername = 'Moussekateer',
 				wikiPassword = 'lolno'
 				)
-		
+	"""
 	model = HLMVModelRegistryKey('models.weapons.c_models.c_bear_claw.c_bear_claw.mdl')
 	automateDis(model=model,
 				numberOfImages=1,
 				n=0,
 				rotationOffset=None,
 				verticalOffset=None,
-				disableXRotation=False,
+				verticalRotations=1,
 				initialRotation=(0.000000, 0.000000, 0.000000),
 				initialTranslation=(63.248035, 0.000000, 1.606477),
 				paint = False,
