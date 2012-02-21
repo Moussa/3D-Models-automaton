@@ -7,6 +7,7 @@ from screenshot import screenshot
 from threadpool import threadpool
 from uploadFile import *
 from win32con import VK_CAPITAL
+from win32con import VK_NUMLOCK
 from win32api import GetKeyState
 try:
 	import psyco
@@ -261,6 +262,7 @@ def automateDis(model,
 				initialTranslation=None,
 				verticalOffset=None,
 				verticalRotations=1,
+				screenshotPause=False,
 				paint=False,
 				teamColours=False,
 				itemName='',
@@ -279,6 +281,7 @@ def automateDis(model,
 				initialTranslation -> The initial model translation as a tuple. Optional, default is (0 0 0).
 				verticalOffset -> The vertical offset for models that are centered in both other planes but not vertically. Optional, default is none.
 				verticalRotations -> Int number where 1 = up/down rotations and 0 = no vertical rotations. Default is 1.
+				screenshotPause -> Pause on every screenshot to pose model. Press number lock key to move on once finished posing. Default is False.
 				paint -> Boolean to indicate whether model is paintable. Optional, default is False.
 				teamColours -> Boolean to indicate whether model is team coloured. Optional, default is False.
 				itemName -> The name of the item. Optional, default is blank.
@@ -354,6 +357,11 @@ def automateDis(model,
 				mouse.click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
 				SendKeys(r'{DOWN 8}{RIGHT}{ENTER}')
 				mouse.sleep(1)
+				# If user wants to pose model before taking screenshot, make script wait
+				if screenshotPause:
+					numKeyState = GetKeyState(VK_NUMLOCK)
+					while GetKeyState(VK_NUMLOCK) == numKeyState:
+						pass
 				# Item painting method
 				def paintcycle(dict, whiteBackgroundImages, blackBackgroundImages):
 					# Take whiteBG screenshots and crop
@@ -540,6 +548,7 @@ if __name__ == '__main__':
 				rotationOffset=None,
 				verticalOffset=None,
 				verticalRotations=1,
+				screenshotPause=False,
 				initialRotation=(0.000000, 0.000000, 0.000000),
 				initialTranslation=(40.320000, 0.000000, 0.000000),
 				paint = True,
