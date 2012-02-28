@@ -104,18 +104,18 @@ paintHexDict = {'Stock': '',
 
 def paintHat(colour, VMTFile):
 	vmt = open(VMTFile, 'rb').read()
-	pattern = '"\$color2" "\{(.[^\}]+)\}"'
+	pattern = '"\$color2"\s+"\{(.[^\}]+)\}"'
 	regex = re.compile(pattern, re.IGNORECASE)
 	if regex.search(vmt):
 		if colour == 'Stock':
-			pattern2 = '(\s*)"\$colortint_base" "\{(.[^\}]+)\}"'
+			pattern2 = '(\s*)"\$colortint_base"\s+"\{(.[^\}]+)\}"'
 			regex = re.compile(pattern2, re.IGNORECASE)
 			result = regex.search(vmt)
 			vmt = re.sub(pattern, '"$color2" "{' + result.group(2) + '}"', vmt)
 		else:
 			vmt = re.sub(pattern, '"$color2" "{' + colour + '}"', vmt)
 	else:
-		pattern = '(\s*)"\$colortint_base" "\{(.[^\}]+)\}"'
+		pattern = '(\s*)"\$colortint_base"\s+"\{(.[^\}]+)\}"'
 		regex = re.compile(pattern, re.IGNORECASE)
 		result = regex.search(vmt)
 		if colour == 'Stock':
