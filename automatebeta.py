@@ -208,11 +208,11 @@ class BlendingThread(threading.Thread):
 			for colour in self.whiteImages:
 				print 'Processing ' + colour
 				if self.xrotation == -15:
-					imgname = str(self.n) + '_1' + paintHexDict[colour] + '.png'
+					imgname = str(self.n) + '_1_' + paintHexDict[colour] + '.png'
 				elif self.xrotation == 15:
-					imgname = str(self.n) + '_-1' + paintHexDict[colour] + '.png'
+					imgname = str(self.n) + '_-1_' + paintHexDict[colour] + '.png'
 				else:
-					imgname = str(self.n) + '_0' + paintHexDict[colour] + '.png'
+					imgname = str(self.n) + '_0_' + paintHexDict[colour] + '.png'
 				black = imgpie.wrap(self.blackImages[colour])
 				white = imgpie.wrap(self.whiteImages[colour])
 				blended = black.blackWhiteBlend(white)
@@ -228,8 +228,8 @@ class BlendingThread(threading.Thread):
 					imgname = str(self.n) + '_-1_RED.png'
 					imgname2 = str(self.n) + '_-1_BLU.png'
 				else:
-					imgname = str(self.n) + '_RED.png'
-					imgname2 = str(self.n) + '_BLU.png'
+					imgname = str(self.n) + '_0_RED.png'
+					imgname2 = str(self.n) + '_0_BLU.png'
 				img.save(self.saveDir + os.sep + imgname, "PNG")
 				img2.save(self.saveDir + os.sep + imgname2, "PNG")
 			else:
@@ -490,14 +490,13 @@ def automateDis(model,
 		if teamColours:
 			finalREDImageName = itemName + ' RED 3D.jpg'
 			finalBLUImageName = itemName + ' BLU 3D.jpg'
-			stitchPool(outputFolder, ' RED', finalREDImageName, numberOfImages, verticalRotations)
-			stitchPool(outputFolder, ' BLU', finalBLUImageName, numberOfImages, verticalRotations)
+			stitchPool(outputFolder, 'RED', finalREDImageName, numberOfImages, verticalRotations)
+			stitchPool(outputFolder, 'BLU', finalBLUImageName, numberOfImages, verticalRotations)
 		else:
 			finalImageName = itemName + ' 3D.jpg'
 			stitchPool(outputFolder, None, finalImageName, numberOfImages, verticalRotations)
 	stitchPool.shutdown()
 	# Upload images to wiki
-	time.sleep(10)
 	if paint:
 		for colour in paintHexDict:
 			if colour == 'Stock':

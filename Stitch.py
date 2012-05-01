@@ -36,7 +36,7 @@ def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 			if colour is None:
 				filename = imagesDir + os.sep + str(i) + '_' + str(s) + '.png'
 			else:
-				filename = imagesDir + os.sep + str(i) + '_' + str(s) + colour + '.png'
+				filename = imagesDir + os.sep + str(i) + '_' + str(s) + '_' + colour + '.png'
 			cropPool(i, s, filename)
 	results = cropPool.shutdown()
 	orderedResults = {}
