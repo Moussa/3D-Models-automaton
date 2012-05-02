@@ -514,7 +514,7 @@ def automateDis(model,
 			url = fileURL(fileName)
 			description = open(outputFolder + os.sep + fileName + ' offsetmap.txt', 'rb').read()
 			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
-			if colour == 'Stock (BLU)' and not TeamColours:
+			if colour == 'Stock (BLU)' and not teamColours:
 				pass
 			else:
 				uploadFile(outputFolder + os.sep + fileName, fileName, description, wikiUsername, wikiPassword, category='', overwrite=False)
