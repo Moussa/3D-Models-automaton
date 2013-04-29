@@ -17,7 +17,7 @@ except:
 
 degreesToRadiansFactor = math.pi / 180.0
 outputImagesDir = r'D:\3DMdl\Output' # The directory where the output images will be saved.
-targetImagesDir = r'D:\3DMdl\targetimages' # The directory containing the target images for mouse clicking.
+targetImagesDir = r'D:\3DMdl\targetimages_sfm' # The directory containing the target images for mouse clicking.
 SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Launcher. This is near the top left of the screen by default.
 #monitorResolution = [1920, 1080]  The monitor resolution of the user in the form of a list; [pixel width, pixel height].
 monitorResolution = (2560, 1440)
@@ -557,11 +557,11 @@ if __name__ == '__main__':
 	starttime = int(round(time.time()))
 	model = HLMVModelRegistryKey('models.weapons.c_models.c_sandwich.c_robo_sandwich.mdl')
 	automateDis(model=model,
-				numberOfImages=1,
+				numberOfImages=24,
 				n=0,
 				rotationOffset=None,
 				verticalOffset=None,
-				verticalRotations=0,
+				verticalRotations=1,
                 screenshotPause=False,
 				initialRotation=(0.000000, 0.000000, 0.000000),
                 initialTranslation=(35.418556, 0.000000, -0.301864),
