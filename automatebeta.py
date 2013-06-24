@@ -1,13 +1,11 @@
-import mouse, Image, os, subprocess, math, imgpie, threading, time
-from subprocess import Popen, PIPE
+import mouse, Image, os, subprocess, math, imgpie, threading, time, subprocess
 from HLMVModel import *
 from SendKeys import SendKeys
 from Stitch import *
 from screenshot import screenshot
 from threadpool import threadpool
 from uploadFile import *
-from win32con import VK_CAPITAL
-from win32con import VK_NUMLOCK
+from win32con import VK_CAPITAL, VK_NUMLOCK
 from win32api import GetKeyState
 try:
 	import psyco
@@ -17,7 +15,6 @@ except:
 
 degreesToRadiansFactor = math.pi / 180.0
 outputImagesDir = r'output' # The directory where the output images will be saved.
-targetImagesDir = r'targetimages' # The directory containing the target images for mouse clicking.
 SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Launcher. This is near the top left of the screen by default.
 monitorResolution = [1920, 1080] # The monitor resolution of the user in the form of a list; [pixel width, pixel height].
 imgCropBoundaries = (1, 42, 1919, 799) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
@@ -314,7 +311,7 @@ def automateDis(model,
 	mouse.sleep(3)
 	
 	try:
-		subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
+		subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		mouse.sleep(2)
 	except:
 		pass
@@ -324,7 +321,6 @@ def automateDis(model,
 	model.setTranslation(x = initialTranslation[0], y = initialTranslation[1], z = initialTranslation[2])
 	model.setNormalMapping(True)
 	model.setBGColour(255, 255, 255, 255)
-	SDKLauncherCoords = None
 	for yrotation in range((-180 + (360/numberOfImages * n)), 180, 360/numberOfImages):
 		print 'n =', str(n)
 		for xrotation in range(-15, 30, 15):
@@ -344,22 +340,13 @@ def automateDis(model,
 					print 'translation =', result
 					model.setTranslation(x = result[0], y = result[1], z = result[2])
 				# Open HLMV
-				if SDKLauncherCoords is None:
-					SDKLauncherCoords = mouse.find({targetImagesDir + os.sep + 'openhlmv.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
-					if SDKLauncherCoords is None:
-						SDKLauncherCoords = mouse.find({targetImagesDir + os.sep + 'openhlmvunhighlighted.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
-					if SDKLauncherCoords is None:
-						SDKLauncherCoords = mouse.find({targetImagesDir + os.sep + 'openhlmvinactive.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
-					if SDKLauncherCoords is None:
-						print 'Couldn\'t find source SDK launcher to click on'
-						break
-				mouse.doubleclick(SDKLauncherCoords)
+				subprocess.call(["F:\\Steam\\steamapps\\common\\Team Fortress 2\\bin\\hlmv.exe"])
 				mouse.sleep(2)
 				# Maximise HLMV
 				SendKeys(r'*{UP}')
 				# Open recent model
 				mouse.click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
-				SendKeys(r'{DOWN 8}{RIGHT}{ENTER}')
+				SendKeys(r'{DOWN 10}{RIGHT}{ENTER}')
 				mouse.sleep(1)
 				# If user wants to pose model before taking screenshot, make script wait
 				if screenshotPause:
@@ -456,7 +443,7 @@ def automateDis(model,
 					else:
 						blendingMachine(xrotation, n, imgBlackBG, imgWhiteBG, outputFolder, False, False)
 				# Close HLMV
-				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
+				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				# Check for kill switch
 				killKeyState = GetKeyState(VK_CAPITAL)
 				if killKeyState in [1, -127]:
