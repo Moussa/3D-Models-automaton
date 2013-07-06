@@ -266,6 +266,7 @@ def automateDis(model,
 				screenshotPause=False,
 				paint=False,
 				teamColours=False,
+				pathToHlmv='',
 				itemName='',
 				REDVMTFile=None,
 				BLUVMTFile=None,
@@ -285,6 +286,7 @@ def automateDis(model,
 				screenshotPause -> Pause on every screenshot to pose model. Press number lock key to move on once finished posing. Default is False.
 				paint -> Boolean to indicate whether model is paintable. Optional, default is False.
 				teamColours -> Boolean to indicate whether model is team coloured. Optional, default is False.
+				pathToHlmv -> Path to hlmv.exe. Usually in common\Team Fortress 2\bin
 				itemName -> The name of the item. Optional, default is blank.
 				REDVMTFile -> The RED vmt file location. Optional, default is none.
 				BLUVMTFile -> The BLU vmt file location. Optional, default is none.
@@ -340,7 +342,7 @@ def automateDis(model,
 					print 'translation =', result
 					model.setTranslation(x = result[0], y = result[1], z = result[2])
 				# Open HLMV
-				subprocess.call(["F:\\Steam\\steamapps\\common\\Team Fortress 2\\bin\\hlmv.exe"])
+				subprocess.Popen([pathToHlmv + os.sep + 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				mouse.sleep(2)
 				# Maximise HLMV
 				SendKeys(r'*{UP}')
@@ -543,6 +545,7 @@ if __name__ == '__main__':
 				initialTranslation=(40.320000, 0.000000, 0.000000),
 				paint = True,
 				teamColours = True,
+				pathToHlmv = r'F:\Steam\steamapps\common\Team Fortress 2\bin',
 				itemName = 'User Moussekateer Test',
 				REDVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap.vmt',
 				BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap_blue.vmt',
@@ -561,6 +564,7 @@ if __name__ == '__main__':
 				initialTranslation=(63.248035, 0.000000, 1.606477),
 				paint = False,
 				teamColours = True,
+				pathToHlmv = r'F:\Steam\steamapps\common\Team Fortress 2\bin',
 				itemName = 'User Moussekateer Test',
 				REDVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\weapons\c_items\c_bear_claws_red.vmt',
 				BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\weapons\c_items\c_bear_claws_blue.vmt',
