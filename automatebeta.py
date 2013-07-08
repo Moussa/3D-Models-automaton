@@ -394,7 +394,7 @@ def automateDis(model,
 			else:
 				finalImageName = '{0} {1} 3D.jpg'.format(itemName, paintHexDict[colour])
 			##### Need to thread this #####
-			if not (colour == 'Stock (BLU)' and not teamColours):
+			if colour != 'Stock (BLU)' or teamColours:
 				stitchPool(outputFolder, paintHexDict[colour], finalImageName, numberOfImages, verticalRotations)
 	else:
 		if teamColours:
