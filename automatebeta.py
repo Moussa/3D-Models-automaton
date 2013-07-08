@@ -1,5 +1,5 @@
-import mouse, Image, os, subprocess, math, imgpie, threading, time, subprocess
-import HLMVModel, Stitch, uploadFile
+import mouse, Image, os, subprocess, math, imgpie, threading, time
+import HLMVModel, Stitch, uploadFile, scriptconstants
 from SendKeys import SendKeys
 from screenshot import screenshot
 from threadpool import threadpool
@@ -11,6 +11,10 @@ try:
 except:
 	pass
 
+paintDict = scriptconstants.paintDict
+BLUPaintDict = scriptconstants.BLUPaintDict
+paintHexDict = scriptconstants.paintHexDict
+
 degreesToRadiansFactor = math.pi / 180.0
 outputImagesDir = r'output' # The directory where the output images will be saved.
 SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Launcher. This is near the top left of the screen by default.
@@ -20,87 +24,11 @@ fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in 
 threadedBlending = True # Use threading for blending computations
 sleepFactor = 1.0 # Sleep time factor that affects how long the script waits for HLMV to load/models to load etc
 
-paintDict = {'Stock': 'Stock',
-			 'An Extraordinary Abundance of Tinge': '230 230 230',
-			 'Color No. 216-190-216': '216 190 216',
-			 'Peculiarly Drab Tincture': '197 175 145',
-			 'Aged Moustache Grey': '126 126 126',
-			 'A Distinctive Lack of Hue': '20 20 20',
-			 'After Eight': '45 45 36',
-			 'Radigan Conagher Brown': '105 77 58',
-			 'Ye Olde Rustic Color': '124 108 87',
-			 'Muskelmannbraun': '165 117 69',
-			 'Australium Gold': '231 181 59',
-			 'The Color of a Gentlemann\'s Business Pants': '240 230 140',
-			 'Dark Salmon Injustice': '233 150 122',
-			 'Mann Co. Orange': '207 115 54',
-			 'Pink as Hell': '255 105 180',
-			 'A Deep Commitment to Purple': '125 64 113',
-			 'Noble Hatter\'s Violet': '81 56 74',
-			 'A Color Similar to Slate': '47 79 79',
-			 'The Bitter Taste of Defeat and Lime': '50 205 50',
-			 'Indubitably Green': '114 158 66',
-			 'A Mann\'s Mint': '188 221 179',
-			 'Drably Olive': '128 128 0',
-			 'Zephaniah\'s Greed': '66 79 59',
-			 'Waterlogged Lab Coat (RED)': '168 154 140',
-			 'Balaclavas Are Forever (RED)': '59 31 35',
-			 'Team Spirit (RED)': '184 56 59',
-			 'Operator\'s Overalls (RED)': '72 56 56',
-			 'The Value of Teamwork (RED)': '128 48 32',
-			 'An Air of Debonair (RED)': '101 71 64',
-			 'Cream Spirit (RED)': '195 108 45'
-			 }
+def openHLMV(pathToHlmv):
+	subprocess.Popen([pathToHlmv + os.sep + 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-BLUPaintDict = {'Stock (BLU)': 'Stock',
-				'Waterlogged Lab Coat (BLU)': '131 159 163',
-				'Balaclavas Are Forever (BLU)': '24 35 61',
-				'Team Spirit (BLU)': '88 133 162',
-				'Operator\'s Overalls (BLU)': '56 66 72',
-				'The Value of Teamwork (BLU)': '37 109 141',
-				'An Air of Debonair (BLU)': '40 57 77',
-				'Cream Spirit (BLU)': '184 128 53'
-				}
-
-paintHexDict = {'Stock': '',
-				'An Extraordinary Abundance of Tinge': 'E6E6E6',
-				'Color No. 216-190-216': 'D8BED8',
-				'Peculiarly Drab Tincture': 'C5AF91',
-				'Aged Moustache Grey': '7E7E7E',
-				'A Distinctive Lack of Hue': '141414',
-				'After Eight': '2D2D24',
-				'Radigan Conagher Brown': '694D3A',
-				'Ye Olde Rustic Color': '7C6C57',
-				'Muskelmannbraun': 'A57545',
-				'Australium Gold': 'E7B53B',
-				'The Color of a Gentlemann\'s Business Pants': 'F0E68C',
-				'Dark Salmon Injustice': 'E9967A',
-				'Mann Co. Orange': 'CF7336',
-				'Pink as Hell': 'FF69B4',
-				'A Deep Commitment to Purple': '7D4071',
-				'Noble Hatter\'s Violet': '51384A',
-				'A Color Similar to Slate': '2F4F4F',
-				'The Bitter Taste of Defeat and Lime': '32CD32',
-				'Indubitably Green': '729E42',
-			 	'A Mann\'s Mint': 'BCDDB3',
-				'Drably Olive': '808000',
-				'Zephaniah\'s Greed': '424F3B',
-				'Waterlogged Lab Coat (RED)': 'A89A8C',
-				'Balaclavas Are Forever (RED)': '3B1F23',
-				'Team Spirit (RED)': 'B8383B',
-				'Operator\'s Overalls (RED)': '483838',
-				'The Value of Teamwork (RED)': '803020',
-				'An Air of Debonair (RED)': '654740',
-				'Cream Spirit (RED)': 'C36C2D',
-				'Stock (BLU)': '',
-				'Waterlogged Lab Coat (BLU)': '839FA3',
-				'Balaclavas Are Forever (BLU)': '18233D',
-				'Team Spirit (BLU)': '5885A2',
-				'Operator\'s Overalls (BLU)': '384248',
-				'The Value of Teamwork (BLU)': '256D8D',
-				'An Air of Debonair (BLU)': '28394D',
-				'Cream Spirit (BLU)': 'B88035'
-				}
+def closeHLMV():
+	subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 def sleep(sleeptime):
 	time.sleep(sleeptime*sleepFactor)
@@ -295,27 +223,26 @@ def automateDis(model,
 				wikiUsername -> wiki.tf2.com username. Optional, default is none.
 				wikiPassword -> wiki.tf2.com password. Optional, default is none.
 	"""
+
 	folder = raw_input('Folder name for created images: ')
 	outputFolder = outputImagesDir + os.sep + folder
 	try:
 		os.makedirs(outputFolder)
 	except:
 		answer = raw_input('Folder already exists, overwrite files? y\\n? ')
-		if answer == 'yes' or answer == 'y':
-			pass
-		elif answer == 'no' or answer == 'n':
+		if answer.lower() in ['no', 'n']:
 			sys.exit(1)
-	
+
 	if initialTranslation is None:
 		initialTranslation = [model.returnTranslation()['x'], model.returnTranslation()['y'], model.returnTranslation()['z']]
 	if initialRotation is None:
 		initialRotation = [model.returnRotation()['x'], model.returnRotation()['y'], model.returnRotation()['z']]
-	
+
 	# Time for user to cancel script start
 	time.sleep(3)
-	
+
 	try:
-		subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		closeHLMV()
 		sleep(2.0)
 	except:
 		pass
@@ -332,7 +259,7 @@ def automateDis(model,
 				# Set rotation
 				sleep(0.5)
 				model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]), z = initialRotation[2])
-				print 'xRot = %s, yRot = %s' % (xrotation, yrotation)
+				print 'xRot = {0}, yRot = {1}'.format(xrotation, yrotation)
 				if rotationOffset is not None:
 					# Set translation to account for off centre rotation
 					result = rotateAboutNewCentre(initialTranslation[0], initialTranslation[1], initialTranslation[2], rotationOffset, yrotation, xrotation)
@@ -344,7 +271,7 @@ def automateDis(model,
 					print 'translation =', result
 					model.setTranslation(x = result[0], y = result[1], z = result[2])
 				# Open HLMV
-				subprocess.Popen([pathToHlmv + os.sep + 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				openHLMV(pathToHlmv)
 				sleep(2)
 				# Maximise HLMV
 				SendKeys(r'*{UP}')
@@ -388,13 +315,11 @@ def automateDis(model,
 						# Change RED hat to BLU
 						redVMTContents = open(REDVMTFile, 'rb').read()
 						bluVMTContents = open(BLUVMTFile, 'rb').read()
-						f = open(REDVMTFile, 'wb')
-						f.write(bluVMTContents)
-						f.close()
+						with open(REDVMTFile, 'wb') as f:
+							f.write(bluVMTContents)
 						whiteBackgroundImages, blackBackgroundImages = paintcycle(BLUPaintDict, whiteBackgroundImages, blackBackgroundImages)
-						g = open(REDVMTFile, 'wb')
-						g.write(redVMTContents)
-						g.close()
+						with open(REDVMTFile, 'wb') as g:
+							g.write(redVMTContents)
 					else:
 						whiteBackgroundImages, blackBackgroundImages = paintcycle(BLUPaintDict, whiteBackgroundImages, blackBackgroundImages)
 				else:
@@ -412,9 +337,8 @@ def automateDis(model,
 						# Change weapon colour to BLU
 						redVMTContents = open(REDVMTFile, 'rb').read()
 						bluVMTContents = open(BLUVMTFile, 'rb').read()
-						f = open(REDVMTFile, 'wb')
-						f.write(bluVMTContents)
-						f.close()
+						with open(REDVMTFile, 'wb') as f:
+							f.write(bluVMTContents)
 						SendKeys(r'{F5}')
 						sleep(0.1)
 						# Take whiteBG screenshot and crop
@@ -426,9 +350,8 @@ def automateDis(model,
 						imgBlackBGBLU = screenshot()
 						imgBlackBGBLU = imgBlackBGBLU.crop(imgCropBoundaries)
 						# Return VMT back to RED
-						g = open(REDVMTFile, 'wb')
-						g.write(redVMTContents)
-						g.close()
+						with open(REDVMTFile, 'wb') as g:
+							g.write(redVMTContents)
 					else:
 						# Take whiteBG screenshot and crop
 						imgWhiteBG = screenshot()
@@ -447,11 +370,11 @@ def automateDis(model,
 					else:
 						blendingMachine(xrotation, n, imgBlackBG, imgWhiteBG, outputFolder, False, False)
 				# Close HLMV
-				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				closeHLMV()
 				# Check for kill switch
 				killKeyState = GetKeyState(VK_CAPITAL)
 				if killKeyState in [1, -127]:
-					print '\nSuccessfully terminated'
+					print 'Successfully terminated'
 					sys.exit(0)
 		n += 1
 	blendingMachine() # Wait for threads to finish, if any
@@ -462,20 +385,16 @@ def automateDis(model,
 		for colour in paintHexDict:
 			if colour == 'Stock':
 				if teamColours:
-					finalImageName = itemName + ' RED ' + '3D.jpg'
+					finalImageName = itemName + ' RED 3D.jpg'
 				else:
 					finalImageName = itemName + ' 3D.jpg'
 			elif colour == 'Stock (BLU)':
 				if teamColours:
-					finalImageName = itemName + ' BLU ' + '3D.jpg'
-				else:
-					pass
+					finalImageName = itemName + ' BLU 3D.jpg'
 			else:
-				finalImageName = itemName + ' ' + paintHexDict[colour] + ' 3D.jpg'
+				finalImageName = '{0} {1} 3D.jpg'.format(itemName, paintHexDict[colour])
 			##### Need to thread this #####
-			if colour == 'Stock (BLU)' and not teamColours:
-				pass
-			else:
+			if not (colour == 'Stock (BLU)' and not teamColours):
 				stitchPool(outputFolder, paintHexDict[colour], finalImageName, numberOfImages, verticalRotations)
 	else:
 		if teamColours:
@@ -492,22 +411,18 @@ def automateDis(model,
 		for colour in paintHexDict:
 			if colour == 'Stock':
 				if teamColours:
-					fileName = itemName + ' RED ' + '3D.jpg'
+					fileName = itemName + ' RED 3D.jpg'
 				else:
 					fileName = itemName + ' 3D.jpg'
 			elif colour == 'Stock (BLU)':
 				if teamColours:
-					fileName = itemName + ' BLU ' + '3D.jpg'
-				else:
-					pass
+					fileName = itemName + ' BLU 3D.jpg'
 			else:
-				fileName = itemName + ' ' + paintHexDict[colour] + ' 3D.jpg'
+				fileName = '{0} {1} 3D.jpg'.format(itemName, paintHexDict[colour])
 			url = uploadFile.fileURL(fileName)
 			description = open(outputFolder + os.sep + fileName + ' offsetmap.txt', 'rb').read()
-			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
-			if colour == 'Stock (BLU)' and not teamColours:
-				pass
-			else:
+			description = description.replace('url = <nowiki></nowiki>', 'url = <nowiki>' + url + '</nowiki>')
+			if colour != 'Stock (BLU)' or teamColours:
 				uploadFile.uploadFile(outputFolder + os.sep + fileName, fileName, description, wikiUsername, wikiPassword, category='', overwrite=False)
 	else:
 		if teamColours:
@@ -534,17 +449,17 @@ if __name__ == '__main__':
 	# Poot values here
 	starttime = int(round(time.time()))
 	
-	# Two example usages
+	# Example usage
 	model = HLMVModel.HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
-	automateDis(model=model,
-				numberOfImages=24,
-				n=0,
-				rotationOffset=None,
-				verticalOffset=None,
-				verticalRotations=1,
-				screenshotPause=False,
-				initialRotation=(0.000000, 0.000000, 0.000000),
-				initialTranslation=(40.320000, 0.000000, 0.000000),
+	automateDis(model = model,
+				numberOfImages = 24,
+				n = 0,
+				rotationOffset = None,
+				verticalOffset = None,
+				verticalRotations = 1,
+				screenshotPause = False,
+				initialRotation = (0.000000, 0.000000, 0.000000),
+				initialTranslation = (40.320000, 0.000000, 0.000000),
 				paint = True,
 				teamColours = True,
 				pathToHlmv = r'F:\Steam\steamapps\common\Team Fortress 2\bin',
@@ -554,24 +469,5 @@ if __name__ == '__main__':
 				wikiUsername = 'Moussekateer',
 				wikiPassword = 'lolno'
 				)
-	"""
-	model = HLMVModel.HLMVModelRegistryKey('models.weapons.c_models.c_bear_claw.c_bear_claw.mdl')
-	automateDis(model=model,
-				numberOfImages=1,
-				n=0,
-				rotationOffset=None,
-				verticalOffset=None,
-				verticalRotations=1,
-				initialRotation=(0.000000, 0.000000, 0.000000),
-				initialTranslation=(63.248035, 0.000000, 1.606477),
-				paint = False,
-				teamColours = True,
-				pathToHlmv = r'F:\Steam\steamapps\common\Team Fortress 2\bin',
-				itemName = 'User Moussekateer Test',
-				REDVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\weapons\c_items\c_bear_claws_red.vmt',
-				BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\weapons\c_items\c_bear_claws_blue.vmt',
-				wikiUsername = 'Moussekateer',
-				wikiPassword = 'lolno'
-				)
-	"""
+
 	print 'completed in ' + str(int(round(time.time())) - starttime) + 'seconds'
