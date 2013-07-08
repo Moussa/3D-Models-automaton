@@ -1,10 +1,8 @@
 import mouse, Image, os, subprocess, math, imgpie, threading, time, subprocess
-from HLMVModel import *
+import HLMVModel, Stitch, uploadFile
 from SendKeys import SendKeys
-from Stitch import *
 from screenshot import screenshot
 from threadpool import threadpool
-from uploadFile import *
 from win32con import VK_CAPITAL, VK_NUMLOCK
 from win32api import GetKeyState
 try:
@@ -20,6 +18,7 @@ monitorResolution = [1920, 1080] # The monitor resolution of the user in the for
 imgCropBoundaries = (1, 42, 1919, 799) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
 fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
 threadedBlending = True # Use threading for blending computations
+sleepFactor = 1.0 # Sleep time factor that affects how long the script waits for HLMV to load/models to load etc
 
 paintDict = {'Stock': 'Stock',
 			 'An Extraordinary Abundance of Tinge': '230 230 230',
@@ -102,6 +101,9 @@ paintHexDict = {'Stock': '',
 				'An Air of Debonair (BLU)': '28394D',
 				'Cream Spirit (BLU)': 'B88035'
 				}
+
+def sleep(sleeptime):
+	time.sleep(sleeptime*sleepFactor)
 
 def paintHat(colour, VMTFile):
 	vmt = open(VMTFile, 'rb').read()
@@ -310,11 +312,11 @@ def automateDis(model,
 		initialRotation = [model.returnRotation()['x'], model.returnRotation()['y'], model.returnRotation()['z']]
 	
 	# Time for user to cancel script start
-	mouse.sleep(3)
+	time.sleep(3)
 	
 	try:
 		subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		mouse.sleep(2)
+		sleep(2.0)
 	except:
 		pass
 	print 'initialTranslation =', initialTranslation
@@ -328,7 +330,7 @@ def automateDis(model,
 		for xrotation in range(-15, 30, 15):
 			if (verticalRotations == 0 and xrotation == 0) or verticalRotations == 1:
 				# Set rotation
-				mouse.sleep(0.5)
+				sleep(0.5)
 				model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]), z = initialRotation[2])
 				print 'xRot = %s, yRot = %s' % (xrotation, yrotation)
 				if rotationOffset is not None:
@@ -343,13 +345,13 @@ def automateDis(model,
 					model.setTranslation(x = result[0], y = result[1], z = result[2])
 				# Open HLMV
 				subprocess.Popen([pathToHlmv + os.sep + 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-				mouse.sleep(2)
+				sleep(2)
 				# Maximise HLMV
 				SendKeys(r'*{UP}')
 				# Open recent model
 				mouse.click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
 				SendKeys(r'{DOWN 10}{RIGHT}{ENTER}')
-				mouse.sleep(1)
+				sleep(1)
 				# If user wants to pose model before taking screenshot, make script wait
 				if screenshotPause:
 					numKeyState = GetKeyState(VK_NUMLOCK)
@@ -361,7 +363,7 @@ def automateDis(model,
 					for colour in dict:
 						paintHat(dict[colour], REDVMTFile)
 						SendKeys(r'{F5}')
-						mouse.sleep(0.1)
+						sleep(0.1)
 						imgWhiteBG = screenshot()
 						imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
 						whiteBackgroundImages[colour] = imgWhiteBG
@@ -371,7 +373,7 @@ def automateDis(model,
 					for colour in dict:
 						paintHat(dict[colour], REDVMTFile)
 						SendKeys(r'{F5}')
-						mouse.sleep(0.1)
+						sleep(0.1)
 						imgBlackBG = screenshot()
 						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
 						blackBackgroundImages[colour] = imgBlackBG
@@ -414,7 +416,7 @@ def automateDis(model,
 						f.write(bluVMTContents)
 						f.close()
 						SendKeys(r'{F5}')
-						mouse.sleep(0.1)
+						sleep(0.1)
 						# Take whiteBG screenshot and crop
 						imgWhiteBGBLU = screenshot()
 						imgWhiteBGBLU = imgWhiteBGBLU.crop(imgCropBoundaries)
@@ -455,7 +457,7 @@ def automateDis(model,
 	blendingMachine() # Wait for threads to finish, if any
 	# Stitch images together
 	print 'Stitching images together...'
-	stitchPool = threadpool(numThreads=2, defaultTarget=stitch)
+	stitchPool = threadpool(numThreads=2, defaultTarget=Stitch.stitch)
 	if paint:
 		for colour in paintHexDict:
 			if colour == 'Stock':
@@ -500,31 +502,31 @@ def automateDis(model,
 					pass
 			else:
 				fileName = itemName + ' ' + paintHexDict[colour] + ' 3D.jpg'
-			url = fileURL(fileName)
+			url = uploadFile.fileURL(fileName)
 			description = open(outputFolder + os.sep + fileName + ' offsetmap.txt', 'rb').read()
 			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
 			if colour == 'Stock (BLU)' and not teamColours:
 				pass
 			else:
-				uploadFile(outputFolder + os.sep + fileName, fileName, description, wikiUsername, wikiPassword, category='', overwrite=False)
+				uploadFile.uploadFile(outputFolder + os.sep + fileName, fileName, description, wikiUsername, wikiPassword, category='', overwrite=False)
 	else:
 		if teamColours:
 			finalREDImageName = itemName + ' RED 3D.jpg'
 			finalBLUImageName = itemName + ' BLU 3D.jpg'
-			url = fileURL(finalREDImageName)
-			url2 = fileURL(finalBLUImageName)
+			url = uploadFile.fileURL(finalREDImageName)
+			url2 = uploadFile.fileURL(finalBLUImageName)
 			description = open(outputFolder + os.sep + finalREDImageName + ' offsetmap.txt', 'rb').read()
 			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
 			description2 = open(outputFolder + os.sep + finalBLUImageName + ' offsetmap.txt', 'rb').read()
 			description2 = description2.replace('url = <nowiki></nowiki>','url = <nowiki>' + url2 + '</nowiki>')
-			uploadFile(outputFolder + os.sep + finalREDImageName, finalREDImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
-			uploadFile(outputFolder + os.sep + finalBLUImageName, finalBLUImageName, description2, wikiUsername, wikiPassword, category='', overwrite=False)
+			uploadFile.uploadFile(outputFolder + os.sep + finalREDImageName, finalREDImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
+			uploadFile.uploadFile(outputFolder + os.sep + finalBLUImageName, finalBLUImageName, description2, wikiUsername, wikiPassword, category='', overwrite=False)
 		else:
 			finalImageName = itemName + ' 3D.jpg'
-			url = fileURL(finalImageName)
+			url = uploadFile.fileURL(finalImageName)
 			description = open(outputFolder + os.sep + finalImageName + ' offsetmap.txt', 'rb').read()
 			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
-			uploadFile(outputFolder + os.sep + finalImageName, finalImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
+			uploadFile.uploadFile(outputFolder + os.sep + finalImageName, finalImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
 	# All done yay
 	print '\nAll done'
 
@@ -533,7 +535,7 @@ if __name__ == '__main__':
 	starttime = int(round(time.time()))
 	
 	# Two example usages
-	model = HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
+	model = HLMVModel.HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
 	automateDis(model=model,
 				numberOfImages=24,
 				n=0,
@@ -553,7 +555,7 @@ if __name__ == '__main__':
 				wikiPassword = 'lolno'
 				)
 	"""
-	model = HLMVModelRegistryKey('models.weapons.c_models.c_bear_claw.c_bear_claw.mdl')
+	model = HLMVModel.HLMVModelRegistryKey('models.weapons.c_models.c_bear_claw.c_bear_claw.mdl')
 	automateDis(model=model,
 				numberOfImages=1,
 				n=0,
