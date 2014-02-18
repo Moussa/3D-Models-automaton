@@ -1,9 +1,8 @@
-import mouse, Image, os, subprocess, math, imgpie, threading, time
+import mouse, Image, os, subprocess, math, imgpie, threading, time, win32gui, win32con
 import HLMVModel, Stitch, uploadFile, scriptconstants
 from SendKeys import SendKeys
 from screenshot import screenshot
 from threadpool import threadpool
-from win32con import VK_CAPITAL, VK_NUMLOCK
 from win32api import GetKeyState
 try:
 	import psyco
@@ -29,6 +28,21 @@ def openHLMV(pathToHlmv):
 
 def closeHLMV():
 	subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+def prepareHLMV():
+	window_list = []
+	def enum_callback(hwnd, results):
+		window_list.append((hwnd, win32gui.GetWindowText(hwnd)))
+
+	win32gui.EnumWindows(enum_callback, [])
+
+	handle_id = None
+	for hwnd, title in window_list:
+		if 'half-life model viewer' in title.lower():
+			handle_id = hwnd
+			break
+	win32gui.SetForegroundWindow(handle_id)
+	win32gui.ShowWindow(handle_id, win32con.SW_MAXIMIZE)
 
 def sleep(sleeptime):
 	time.sleep(sleeptime*sleepFactor)
@@ -273,16 +287,16 @@ def automateDis(model,
 				# Open HLMV
 				openHLMV(pathToHlmv)
 				sleep(2)
-				# Maximise HLMV
-				SendKeys(r'*{UP}')
+				# Focus and maximise HLMV
+				prepareHLMV()
 				# Open recent model
 				mouse.click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
 				SendKeys(r'{DOWN 10}{RIGHT}{ENTER}')
 				sleep(1)
 				# If user wants to pose model before taking screenshot, make script wait
 				if screenshotPause:
-					numKeyState = GetKeyState(VK_NUMLOCK)
-					while GetKeyState(VK_NUMLOCK) == numKeyState:
+					numKeyState = GetKeyState(win32con.VK_NUMLOCK)
+					while GetKeyState(win32con.VK_NUMLOCK) == numKeyState:
 						pass
 				# Item painting method
 				def paintcycle(dict, whiteBackgroundImages, blackBackgroundImages):
@@ -372,7 +386,7 @@ def automateDis(model,
 				# Close HLMV
 				closeHLMV()
 				# Check for kill switch
-				killKeyState = GetKeyState(VK_CAPITAL)
+				killKeyState = GetKeyState(win32con.VK_CAPITAL)
 				if killKeyState in [1, -127]:
 					print 'Successfully terminated'
 					sys.exit(0)
