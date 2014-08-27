@@ -212,8 +212,8 @@ def automateDis(model,
 				teamColours=False,
 				pathToHlmv='',
 				itemName='',
-				REDVMTFile=None,
-				BLUVMTFile=None,
+				REDVMTFiles=None,
+				BLUVMTFiles=None,
 				wikiUsername=None,
 				wikiPassword=None):
 	""" Method to automize process of taking images for 3D model views. 
@@ -232,8 +232,8 @@ def automateDis(model,
 				teamColours -> Boolean to indicate whether model is team coloured. Optional, default is False.
 				pathToHlmv -> Path to hlmv.exe. Usually in common\Team Fortress 2\bin
 				itemName -> The name of the item. Optional, default is blank.
-				REDVMTFile -> The RED vmt file location. Optional, default is none.
-				BLUVMTFile -> The BLU vmt file location. Optional, default is none.
+				REDVMTFiles -> The RED vmt file locations. Optional, default is none.
+				BLUVMTFiles -> The BLU vmt file locations. Optional, default is none.
 				wikiUsername -> wiki.tf2.com username. Optional, default is none.
 				wikiPassword -> wiki.tf2.com password. Optional, default is none.
 	"""
@@ -302,9 +302,9 @@ def automateDis(model,
 				def paintcycle(dict, whiteBackgroundImages, blackBackgroundImages):
 					# Take whiteBG screenshots and crop
 					for colour in dict:
-						paintHat(dict[colour], REDVMTFile)
+						paintHat(dict[colour], REDVMTFiles)
 						SendKeys(r'{F5}')
-						sleep(0.1)
+						sleep(1.0)
 						imgWhiteBG = screenshot()
 						imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
 						whiteBackgroundImages[colour] = imgWhiteBG
@@ -312,9 +312,9 @@ def automateDis(model,
 					SendKeys(r'^b')
 					# Take blackBG screenshots and crop
 					for colour in dict:
-						paintHat(dict[colour], REDVMTFile)
+						paintHat(dict[colour], REDVMTFiles)
 						SendKeys(r'{F5}')
-						sleep(0.1)
+						sleep(1.0)
 						imgBlackBG = screenshot()
 						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
 						blackBackgroundImages[colour] = imgBlackBG
@@ -327,13 +327,19 @@ def automateDis(model,
 					whiteBackgroundImages, blackBackgroundImages = paintcycle(paintDict, whiteBackgroundImages, blackBackgroundImages)
 					if teamColours:
 						# Change RED hat to BLU
-						redVMTContents = open(REDVMTFile, 'rb').read()
-						bluVMTContents = open(BLUVMTFile, 'rb').read()
-						with open(REDVMTFile, 'wb') as f:
-							f.write(bluVMTContents)
+						redFiles = []
+						bluFiles = []
+						for fileName in REDVMTFiles:
+							redFiles.append(open(fileName, 'rb').read())
+						for fileName in BLUVMTFiles:
+							bluFiles.append(open(fileName, 'rb').read())
+						for file, fileName in zip(bluFiles, redFileNames):
+							with open(fileName, 'wb') as f:
+								f.write(file)
 						whiteBackgroundImages, blackBackgroundImages = paintcycle(BLUPaintDict, whiteBackgroundImages, blackBackgroundImages)
-						with open(REDVMTFile, 'wb') as g:
-							g.write(redVMTContents)
+						for file, fileName in zip(bluFiles, redFileNames):
+							with open(fileName, 'wb') as f:
+								f.write(file)
 					else:
 						whiteBackgroundImages, blackBackgroundImages = paintcycle(BLUPaintDict, whiteBackgroundImages, blackBackgroundImages)
 				else:
@@ -349,12 +355,17 @@ def automateDis(model,
 						# Change BG colour to white
 						SendKeys(r'^b')
 						# Change weapon colour to BLU
-						redVMTContents = open(REDVMTFile, 'rb').read()
-						bluVMTContents = open(BLUVMTFile, 'rb').read()
-						with open(REDVMTFile, 'wb') as f:
-							f.write(bluVMTContents)
+						redFiles = []
+						bluFiles = []
+						for fileName in REDVMTFiles:
+							redFiles.append(open(fileName, 'rb').read())
+						for fileName in BLUVMTFiles:
+							bluFiles.append(open(fileName, 'rb').read())
+						for file, fileName in zip(bluFiles, redFileNames):
+							with open(fileName, 'wb') as f:
+								f.write(file)
 						SendKeys(r'{F5}')
-						sleep(0.1)
+						sleep(1.0)
 						# Take whiteBG screenshot and crop
 						imgWhiteBGBLU = screenshot()
 						imgWhiteBGBLU = imgWhiteBGBLU.crop(imgCropBoundaries)
@@ -364,8 +375,9 @@ def automateDis(model,
 						imgBlackBGBLU = screenshot()
 						imgBlackBGBLU = imgBlackBGBLU.crop(imgCropBoundaries)
 						# Return VMT back to RED
-						with open(REDVMTFile, 'wb') as g:
-							g.write(redVMTContents)
+						for file, fileName in zip(bluFiles, redFileNames):
+							with open(fileName, 'wb') as f:
+								f.write(file)
 					else:
 						# Take whiteBG screenshot and crop
 						imgWhiteBG = screenshot()
@@ -478,8 +490,8 @@ if __name__ == '__main__':
 				teamColours = True,
 				pathToHlmv = r'F:\Steam\steamapps\common\Team Fortress 2\bin',
 				itemName = 'User Moussekateer Test',
-				REDVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap.vmt',
-				BLUVMTFile = r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap_blue.vmt',
+				REDVMTFiles = [r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap.vmt'],
+				BLUVMTFiles = [r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap_blue.vmt'],
 				wikiUsername = 'Moussekateer',
 				wikiPassword = 'lolno'
 				)
