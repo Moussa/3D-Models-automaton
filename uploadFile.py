@@ -17,8 +17,9 @@ def uploadFile(file, title, description, username, password, category='', wikiUR
 		try:
 			uploader.upload(fileobj=open(file, "rb"), ignorewarnings=True, comment=description)
 			wikitools.page.Page(wiki, u'File:' + title).edit(description + category, summary=u'', minor=True, bot=False, skipmd5=True)
-		except:
-			print 'Failed', file
+		except Exception as e:
+			print 'Failed for file: ', file
+			print e
 			return None
 	except KeyboardInterrupt:
 		print 'Stopped.'
