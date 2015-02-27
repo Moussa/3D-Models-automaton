@@ -492,8 +492,8 @@ if __name__ == '__main__':
 				itemName = 'User Moussekateer Test',
 				REDVMTFiles = [r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap.vmt'],
 				BLUVMTFiles = [r'E:\Steam\steamapps\moussekateer\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap_blue.vmt'],
-				wikiUsername = 'Moussekateer',
 				wikiPassword = 'lolno'
+				wikiUsername = 'Moussekateer',
 				)
 
 	print 'completed in ' + str(int(round(time.time())) - starttime) + 'seconds'
