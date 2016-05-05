@@ -1,9 +1,21 @@
-import mouse, Image, os, subprocess, math, imgpie, threading, time, win32gui, win32con
-import HLMVModel, Stitch, uploadFile, scriptconstants
-from SendKeys import SendKeys
+from mouse import click # 300
+from os import sep # Various
+from subprocess import Popen, PIPE # 38, 41
+from math import sin, cos, pi # 29, 104, 125
+from imgpie import wrap # 179, 180
+from time import time, sleep # 59, 263, 481
+from win32api import GetKeyState
+from win32gui import EnumWindows, GetWindowText, SetForegroundWindow, ShowWindow # 44
+from HLMVModel import HLMVModelRegistryKey # 486
+from Stitch import stitch # 416
+from SendKeys import SendKeys # Various
 from screenshot import screenshot
 from threadpool import threadpool
-from win32api import GetKeyState
+import Image
+import threading
+import win32con
+import uploadFile
+import scriptconstants
 try:
 	import psyco
 	psyco.full()
@@ -14,7 +26,7 @@ paintDict = scriptconstants.paintDict
 BLUPaintDict = scriptconstants.BLUPaintDict
 paintHexDict = scriptconstants.paintHexDict
 
-degreesToRadiansFactor = math.pi / 180.0
+degreesToRadiansFactor = pi / 180.0
 outputImagesDir = r'output' # The directory where the output images will be saved.
 SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Launcher. This is near the top left of the screen by default.
 monitorResolution = [1920, 1080] # The monitor resolution of the user in the form of a list; [pixel width, pixel height].
@@ -24,28 +36,27 @@ threadedBlending = True # Use threading for blending computations
 sleepFactor = 1.0 # Sleep time factor that affects how long the script waits for HLMV to load/models to load etc
 
 def openHLMV(pathToHlmv):
-	subprocess.Popen([pathToHlmv + os.sep + 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	Popen([pathToHlmv + sep + 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
 
 def closeHLMV():
-	subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
 
 def prepareHLMV():
 	window_list = []
 	def enum_callback(hwnd, results):
-		window_list.append((hwnd, win32gui.GetWindowText(hwnd)))
+		window_list.append((hwnd, GetWindowText(hwnd)))
 
-	win32gui.EnumWindows(enum_callback, [])
+	EnumWindows(enum_callback, [])
 
 	handle_id = None
 	for hwnd, title in window_list:
 		if 'half-life model viewer' in title.lower():
 			handle_id = hwnd
 			break
-	win32gui.SetForegroundWindow(handle_id)
-	win32gui.ShowWindow(handle_id, win32con.SW_MAXIMIZE)
+	SetForegroundWindow(handle_id)
+	ShowWindow(handle_id, win32con.SW_MAXIMIZE)
 
 def sleep(sleeptime):
-	time.sleep(sleeptime*sleepFactor)
 
 def paintHat(colour, VMTFile):
 	vmt = open(VMTFile, 'rb').read()
@@ -68,6 +79,7 @@ def paintHat(colour, VMTFile):
 	f = open(VMTFile, 'wb')
 	f.write(vmt)
 	f.close()
+	sleep(sleeptime*sleepFactor)
 
 def getBrightness(p):
 	return (299.0 * p[0] + 587.0 * p[1] + 114.0 * p[2]) / 1000.0
@@ -105,9 +117,9 @@ def rotateAboutNewCentre(x, y, z, rotOffset, yAngle, xAngle):
 	yAngle *= degreesToRadiansFactor
 	xAngle *= degreesToRadiansFactor
 
-	x += math.cos(yAngle) * rotOffset
-	y += math.sin(yAngle) * rotOffset
-	z -= math.sin(xAngle) * rotOffset
+	x += cos(yAngle) * rotOffset
+	y += sin(yAngle) * rotOffset
+	z -= sin(xAngle) * rotOffset
 	return [x, y, z]
 
 def offsetVertically(x, y, z, vertOffset, yAngle, xAngle):
@@ -126,8 +138,8 @@ def offsetVertically(x, y, z, vertOffset, yAngle, xAngle):
 	yAngle *= degreesToRadiansFactor
 	xAngle *= degreesToRadiansFactor
 
-	x += math.sin(xAngle) * (math.sin(yAngle) * vertOffset
-	y += math.sin(xAngle) * (math.sin(yAngle) * vertOffset
+	x += sin(xAngle) * (sin(yAngle) * vertOffset
+	y += sin(xAngle) * (sin(yAngle) * vertOffset
 	return [x, y, z]
 
 class BlendingThread(threading.Thread):
@@ -234,7 +246,7 @@ def automateDis(model,
 	"""
 
 	folder = raw_input('Folder name for created images: ')
-	outputFolder = outputImagesDir + os.sep + folder
+	outputFolder = outputImagesDir + sep + folder
 	try:
 		os.makedirs(outputFolder)
 	except:
@@ -248,7 +260,7 @@ def automateDis(model,
 		initialRotation = [model.returnRotation()['x'], model.returnRotation()['y'], model.returnRotation()['z']]
 
 	# Time for user to cancel script start
-	time.sleep(3)
+	sleep(3)
 
 	try:
 		closeHLMV()
@@ -285,7 +297,7 @@ def automateDis(model,
 				# Focus and maximise HLMV
 				prepareHLMV()
 				# Open recent model
-				mouse.click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
+				click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
 				SendKeys(r'{DOWN 10}{RIGHT}{ENTER}')
 				sleep(1)
 				# If user wants to pose model before taking screenshot, make script wait
@@ -300,8 +312,7 @@ def automateDis(model,
 						paintHat(dict[colour], REDVMTFiles)
 						SendKeys(r'{F5}')
 						sleep(1.0)
-						imgWhiteBG = screenshot()
-						imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
+						imgWhiteBG = screenshot().crop(imgCropBoundaries)
 						whiteBackgroundImages[colour] = imgWhiteBG
 					# Change BG colour to black
 					SendKeys(r'^b')
@@ -310,8 +321,7 @@ def automateDis(model,
 						paintHat(dict[colour], REDVMTFiles)
 						SendKeys(r'{F5}')
 						sleep(1.0)
-						imgBlackBG = screenshot()
-						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
+						imgBlackBG = screenshot().crop(imgCropBoundaries)
 						blackBackgroundImages[colour] = imgBlackBG
 					SendKeys(r'^b')
 					SendKeys(r'{F5}')
@@ -340,13 +350,11 @@ def automateDis(model,
 				else:
 					if teamColours:
 						# Take whiteBG screenshot and crop
-						imgWhiteBGRED = screenshot()
-						imgWhiteBGRED = imgWhiteBGRED.crop(imgCropBoundaries)
+						imgWhiteBGRED = screenshot().crop(imgCropBoundaries)
 						# Change BG colour to black
 						SendKeys(r'^b')
 						# Take blackBG screenshot and crop
-						imgBlackBGRED = screenshot()
-						imgBlackBGRED = imgBlackBGRED.crop(imgCropBoundaries)
+						imgBlackBGRED = screenshot().crop(imgCropBoundaries)
 						# Change BG colour to white
 						SendKeys(r'^b')
 						# Change weapon colour to BLU
@@ -362,13 +370,11 @@ def automateDis(model,
 						SendKeys(r'{F5}')
 						sleep(1.0)
 						# Take whiteBG screenshot and crop
-						imgWhiteBGBLU = screenshot()
-						imgWhiteBGBLU = imgWhiteBGBLU.crop(imgCropBoundaries)
+						imgWhiteBGBLU = screenshot().crop(imgCropBoundaries)
 						# Change BG colour to black
 						SendKeys(r'^b')
 						# Take blackBG screenshot and crop
-						imgBlackBGBLU = screenshot()
-						imgBlackBGBLU = imgBlackBGBLU.crop(imgCropBoundaries)
+						imgBlackBGBLU = screenshot().crop(imgCropBoundaries)
 						# Return VMT back to RED
 						for file, fileName in zip(bluFiles, redFileNames):
 							with open(fileName, 'wb') as f:
@@ -401,7 +407,7 @@ def automateDis(model,
 	blendingMachine() # Wait for threads to finish, if any
 	# Stitch images together
 	print 'Stitching images together...'
-	stitchPool = threadpool(numThreads=2, defaultTarget=Stitch.stitch)
+	stitchPool = threadpool(numThreads=2, defaultTarget=stitch)
 	if paint:
 		for colour in paintHexDict:
 			if colour == 'Stock':
@@ -441,37 +447,37 @@ def automateDis(model,
 			else:
 				fileName = '{0} {1} 3D.jpg'.format(itemName, paintHexDict[colour])
 			url = uploadFile.fileURL(fileName)
-			description = open(outputFolder + os.sep + fileName + ' offsetmap.txt', 'rb').read()
+			description = open(outputFolder + sep + fileName + ' offsetmap.txt', 'rb').read()
 			description = description.replace('url = <nowiki></nowiki>', 'url = <nowiki>' + url + '</nowiki>')
 			if colour != 'Stock (BLU)' or teamColours:
-				uploadFile.uploadFile(outputFolder + os.sep + fileName, fileName, description, wikiUsername, wikiPassword, category='', overwrite=False)
+				uploadFile.uploadFile(outputFolder + sep + fileName, fileName, description, wikiUsername, wikiPassword, category='', overwrite=False)
 	else:
 		if teamColours:
 			finalREDImageName = itemName + ' RED 3D.jpg'
 			finalBLUImageName = itemName + ' BLU 3D.jpg'
 			url = uploadFile.fileURL(finalREDImageName)
 			url2 = uploadFile.fileURL(finalBLUImageName)
-			description = open(outputFolder + os.sep + finalREDImageName + ' offsetmap.txt', 'rb').read()
+			description = open(outputFolder + sep + finalREDImageName + ' offsetmap.txt', 'rb').read()
 			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
-			description2 = open(outputFolder + os.sep + finalBLUImageName + ' offsetmap.txt', 'rb').read()
+			description2 = open(outputFolder + sep + finalBLUImageName + ' offsetmap.txt', 'rb').read()
 			description2 = description2.replace('url = <nowiki></nowiki>','url = <nowiki>' + url2 + '</nowiki>')
-			uploadFile.uploadFile(outputFolder + os.sep + finalREDImageName, finalREDImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
-			uploadFile.uploadFile(outputFolder + os.sep + finalBLUImageName, finalBLUImageName, description2, wikiUsername, wikiPassword, category='', overwrite=False)
+			uploadFile.uploadFile(outputFolder + sep + finalREDImageName, finalREDImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
+			uploadFile.uploadFile(outputFolder + sep + finalBLUImageName, finalBLUImageName, description2, wikiUsername, wikiPassword, category='', overwrite=False)
 		else:
 			finalImageName = itemName + ' 3D.jpg'
 			url = uploadFile.fileURL(finalImageName)
-			description = open(outputFolder + os.sep + finalImageName + ' offsetmap.txt', 'rb').read()
+			description = open(outputFolder + sep + finalImageName + ' offsetmap.txt', 'rb').read()
 			description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
-			uploadFile.uploadFile(outputFolder + os.sep + finalImageName, finalImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
+			uploadFile.uploadFile(outputFolder + sep + finalImageName, finalImageName, description, wikiUsername, wikiPassword, category='', overwrite=False)
 	# All done yay
 	print '\nAll done'
 
 if __name__ == '__main__':
 	# Poot values here
-	starttime = time.time()
+	starttime = time()
 	
 	# Example usage
-	model = HLMVModel.HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
+	model = HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
 	automateDis(model = model,
 				numberOfImages = 24,
 				n = 0,
@@ -491,4 +497,4 @@ if __name__ == '__main__':
 				wikiUsername = 'Moussekateer',
 				)
 
-	print 'completed in ' + str(int(time.time() - starttime)) + 'seconds'
+	print 'completed in ' + str(int(time() - starttime)) + 'seconds'
