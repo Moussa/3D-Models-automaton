@@ -154,44 +154,31 @@ class BlendingThread(threading.Thread):
 	def start(self):
 		threading.Thread.__init__(self)
 		threading.Thread.start(self)
+	# self.save(img, 'BLU') -> self.saveDir + '\' + str(self.n) + '_1_BLU.png' 
+	# self.save(img) -> self.saveDir + '\' + str(self.n) + '_0.png'
+	def save(self, img, *args):
+		if len(args) > 0:
+			img.save('%s\%d_%d_%s.png' % (self.saveDir, self.n, self.xrotation / -15, name), 'PNG')
+		else:
+			img.save('%s\%d_%d.png' % (self.saveDir, self.n, self.xrotation / -15), 'PNG')
+		
 	def run(self):
 		if self.painted:
 			for colour in self.whiteImages:
 				print 'Processing ' + colour
-				if self.xrotation == -15:
-					imgname = str(self.n) + '_1_' + paintHexDict[colour] + '.png'
-				elif self.xrotation == 15:
-					imgname = str(self.n) + '_-1_' + paintHexDict[colour] + '.png'
-				else:
-					imgname = str(self.n) + '_0_' + paintHexDict[colour] + '.png'
 				black = imgpie.wrap(self.blackImages[colour])
 				white = imgpie.wrap(self.whiteImages[colour])
-				blended = black.blackWhiteBlend(white)
-				blended.save(self.saveDir + os.sep + imgname)
+				img = black.blackWhiteBlend(white)
+				self.save(img, paintHexDict[colour])
 		else:
 			if self.teamColours:
 				img = toAlphaBlackWhite(self.blackImages['RED'], self.whiteImages['RED'])
 				img2 = toAlphaBlackWhite(self.blackImages['BLU'], self.whiteImages['BLU'])
-				if self.xrotation == -15:
-					imgname = str(self.n) + '_1_RED.png'
-					imgname2 = str(self.n) + '_1_BLU.png'
-				elif self.xrotation == 15:
-					imgname = str(self.n) + '_-1_RED.png'
-					imgname2 = str(self.n) + '_-1_BLU.png'
-				else:
-					imgname = str(self.n) + '_0_RED.png'
-					imgname2 = str(self.n) + '_0_BLU.png'
-				img.save(self.saveDir + os.sep + imgname, "PNG")
-				img2.save(self.saveDir + os.sep + imgname2, "PNG")
+				self.save(img, 'RED')
+				self.save(img2, 'BLU')
 			else:
 				img = toAlphaBlackWhite(self.blackImages, self.whiteImages)
-				if self.xrotation == -15:
-					imgname = str(self.n) + '_1.png'
-				elif self.xrotation == 15:
-					imgname = str(self.n) + '_-1.png'
-				else:
-					imgname = str(self.n) + '_0.png'
-				img.save(self.saveDir + os.sep + imgname, "PNG")
+				self.save(img)
 
 blendThread = None
 def blendingMachine(*args, **kwargs):
