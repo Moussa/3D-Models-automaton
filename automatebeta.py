@@ -56,17 +56,15 @@ def paintHat(colour, VMTFile):
 			pattern2 = '(\s*)"\$colortint_base"\s+"\{(.[^\}]+)\}"'
 			regex = re.compile(pattern2, re.IGNORECASE)
 			result = regex.search(vmt)
-			vmt = re.sub(pattern, '"$color2" "{' + result.group(2) + '}"', vmt)
-		else:
-			vmt = re.sub(pattern, '"$color2" "{' + colour + '}"', vmt)
+			colour = result.group(2)
+		vmt = re.sub(pattern, '"$color2" "{' + colour + '}"', vmt)
 	else:
 		pattern = '(\s*)"\$colortint_base"\s+"\{(.[^\}]+)\}"'
 		regex = re.compile(pattern, re.IGNORECASE)
 		result = regex.search(vmt)
 		if colour == 'Stock':
-			vmt = re.sub(pattern, result.group(1) + '"$colortint_base" "{' + result.group(2) + '}"\n' + result.group(1).replace('\r\n','') + '"$color2" "{' + result.group(2) + '}"', vmt)
-		else:
-			vmt = re.sub(pattern, result.group(1) + '"$colortint_base" "{' + result.group(2) + '}"\n' + result.group(1).replace('\r\n','') + '"$color2" "{' + colour + '}"', vmt)
+			colour = result.group(2)
+		vmt = re.sub(pattern, result.group(1) + '"$colortint_base" "{' + result.group(2) + '}"\n' + result.group(1).replace('\r\n','') + '"$color2" "{' + colour + '}"', vmt)
 	f = open(VMTFile, 'wb')
 	f.write(vmt)
 	f.close()
