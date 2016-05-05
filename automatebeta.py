@@ -22,6 +22,8 @@ try:
 except:
 	pass
 
+global threads
+threads = []
 paintDict = scriptconstants.paintDict
 BLUPaintDict = scriptconstants.BLUPaintDict
 paintHexDict = scriptconstants.paintHexDict
@@ -321,14 +323,13 @@ def automateDis(model,
 								f.write(file)
 					else:
 						# Take whiteBG screenshot and crop
-						imgWhiteBG = screenshot()
-						imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
+						imgWhiteBG = screenshot().crop(imgCropBoundaries)
 						# Change BG colour to black
 						SendKeys(r'^b')
 						# Take blackBG screenshot and crop
-						imgBlackBG = screenshot()
-						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
+						imgBlackBG = screenshot().crop(imgCropBoundaries)
 				# Remove background from images
+				global threads
 				if paint:
 					thread = Thread(target=blend, kwargs={
 						'images': {'Black':blackBackgroundImages, 'White':whiteBackgroundImages},
