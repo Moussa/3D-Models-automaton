@@ -91,36 +91,46 @@ def toAlphaBlackWhite(blackImg, whiteImg):
 			)
 	return blackImg
 
-def rotateAboutNewCentre(currentXPosition, currentYPosition, currentZPosition, rotationOffset, yangle, xangle):
+def rotateAboutNewCentre(x, y, z, rotOffset, yAngle, xAngle):
 	""" Method to position a model in HLMV with a new center of rotation.
 	
 		Parameters:
-                currentXPosition -> The current x position of the model.
-				currentYPosition -> The current y position of the model.
-				currentZPosition -> The current z position of the model.
-				rotationOffset -> The distance from the default centre of rotation to the new one (in HLMV units).
-				yangle -> The angle the model has been rotated by around the y axis.
-				xangle -> The angle the model has been rotated by around the x axis.
+                x -> The current x position of the model.
+				y -> The current y position of the model.
+				z -> The current z position of the model.
+				rotOffset -> The distance from the default centre of rotation to the new one (in HLMV units).
+				yAngle -> The angle the model has been rotated by around the y axis, in degrees.
+				xAngle -> The angle the model has been rotated by around the x axis, in degrees.
 	"""
-	yangle = float(yangle)
-	xangle = float(xangle)
-	rotationOffset = float(rotationOffset)
-	if yangle < 0.0:
-		yangle = 360.0 - abs(yangle) # Funky HLMV coordinate system
-	newX = (math.cos(yangle * degreesToRadiansFactor) * rotationOffset) + float(currentXPosition)
-	newY = (math.sin(yangle * degreesToRadiansFactor) * rotationOffset) + float(currentYPosition)
-	newZ = float(currentZPosition) - (math.sin(xangle * degreesToRadiansFactor) * rotationOffset)
-	return [newX, newY, newZ]
+	if yAngle < 0:
+		yAngle += 360 # HLMV goes -180 to 180, not 0 to 360.
+	yAngle *= degreesToRadiansFactor
+	xAngle *= degreesToRadiansFactor
 
-def offsetVertically(currentXPosition, currentYPosition, currentZPosition, verticalOffset, yangle, xangle):
-	yangle = float(yangle)
-	verticalOffset = float(verticalOffset)
-	if yangle < 0.0:
-		yangle = 360.0 - abs(yangle) # Funky HLMV coordinate system
-	newX = ((math.sin(xangle * degreesToRadiansFactor)) * (math.sin(yangle * degreesToRadiansFactor)) * verticalOffset) + float(currentXPosition)
-	newY = ((math.sin(yangle * degreesToRadiansFactor)) * (math.sin(xangle * degreesToRadiansFactor)) * verticalOffset) + float(currentYPosition)
-	newZ = currentZPosition
-	return [newX, newY, newZ]
+	x += math.cos(yAngle) * rotOffset
+	y += math.sin(yAngle) * rotOffset
+	z -= math.sin(xAngle) * rotOffset
+	return [x, y, z]
+
+def offsetVertically(x, y, z, vertOffset, yAngle, xAngle):
+	""" Method to position a model in HLMV with a new vertical offset
+	
+		Parameters:
+                x -> The current x position of the model.
+				y -> The current y position of the model.
+				z -> The current z position of the model.
+				vertOffset -> 
+				yAngle -> The angle the model has been rotated by around the y axis, in degrees.
+				xAngle -> The angle the model has been rotated by around the x axis, in degrees.
+	"""
+	if yAngle < 0:
+		yAngle += 360 # HLMV goes -180 to 180, not 0 to 360.
+	yAngle *= degreesToRadiansFactor
+	xAngle *= degreesToRadiansFactor
+
+	x += math.sin(xAngle) * (math.sin(yAngle) * vertOffset
+	y += math.sin(xAngle) * (math.sin(yAngle) * vertOffset
+	return [x, y, z]
 
 class BlendingThread(threading.Thread):
 	def __init__(self, xrotation, n, blackImages, whiteImages, saveDir, painted, teamColours):
@@ -473,7 +483,7 @@ def automateDis(model,
 
 if __name__ == '__main__':
 	# Poot values here
-	starttime = int(round(time.time()))
+	starttime = time.time()
 	
 	# Example usage
 	model = HLMVModel.HLMVModelRegistryKey('models.player.items.heavy.heavy_stocking_cap.mdl')
@@ -496,4 +506,4 @@ if __name__ == '__main__':
 				wikiUsername = 'Moussekateer',
 				)
 
-	print 'completed in ' + str(int(round(time.time())) - starttime) + 'seconds'
+	print 'completed in ' + str(int(time.time() - starttime)) + 'seconds'
