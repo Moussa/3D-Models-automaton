@@ -142,69 +142,9 @@ def offsetVertically(x, y, z, vertOffset, yAngle, xAngle):
 	y += sin(xAngle) * (sin(yAngle) * vertOffset
 	return [x, y, z]
 
-class BlendingThread(threading.Thread):
-	def __init__(self, xrotation, n, blackImages, whiteImages, saveDir, painted, teamColours):
-		self.xrotation = xrotation
-		self.n = n
-		self.blackImages = blackImages
-		self.whiteImages = whiteImages
-		self.saveDir = saveDir
-		self.painted = painted
-		self.teamColours = teamColours
-		self.started = False
-	def join(self):
-		if self.started:
-			threading.Thread.join(self)
-	def go(self, threaded=True):
-		if threaded:
-			self.started = True
-			self.start()
-		else:
-			self.run()
-	def start(self):
-		threading.Thread.__init__(self)
-		threading.Thread.start(self)
-	# self.save(img, 'BLU') -> self.saveDir + '\' + str(self.n) + '_1_BLU.png' 
-	# self.save(img) -> self.saveDir + '\' + str(self.n) + '_0.png'
-	def save(self, img, *args):
-		if len(args) > 0:
-			img.save('%s\%d_%d_%s.png' % (self.saveDir, self.n, self.xrotation / -15, name), 'PNG')
-		else:
-			img.save('%s\%d_%d.png' % (self.saveDir, self.n, self.xrotation / -15), 'PNG')
-		
-	def run(self):
-		if self.painted:
-			for colour in self.whiteImages:
-				print 'Processing ' + colour
-				black = imgpie.wrap(self.blackImages[colour])
-				white = imgpie.wrap(self.whiteImages[colour])
-				img = black.blackWhiteBlend(white)
-				self.save(img, paintHexDict[colour])
-		else:
-			if self.teamColours:
-				img = toAlphaBlackWhite(self.blackImages['RED'], self.whiteImages['RED'])
-				img2 = toAlphaBlackWhite(self.blackImages['BLU'], self.whiteImages['BLU'])
-				self.save(img, 'RED')
-				self.save(img2, 'BLU')
-			else:
-				img = toAlphaBlackWhite(self.blackImages, self.whiteImages)
-				self.save(img)
-
-blendThread = None
-def blendingMachine(*args, **kwargs):
-	"""
-	Dis is blending masheen.
-	Poot things it, they get passed to BlendingThread.
-	Whether they actually run threaded or not is up to the "threadedBlending" variable up there.
-	It handles the join'ing of old threads, if it runs threaded in the first place.
-	Make sure to call blendingMachine() without arguments when the thing is done, to ensure that threads (if any) terminate.
-	"""
-	global blendThread, threadedBlending
-	if blendThread is not None:
-		blendThread.join()
-	if len(args) or len(kwargs):
-		blendThread = BlendingThread(*args, **kwargs)
-		blendThread.go(threaded=threadedBlending)
+def blend(images, name, teamColors=False):
+	img = toAlphaBlackWhite(images['Black'], images['White'])
+	img.save(name, 'PNG')
 
 def automateDis(model,
 				numberOfImages=24,
@@ -390,12 +330,33 @@ def automateDis(model,
 						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
 				# Remove background from images
 				if paint:
-					blendingMachine(xrotation, n, blackBackgroundImages, whiteBackgroundImages, outputFolder, True, True)
+					thread = Thread(target=blend, kwargs={
+						'images': {'Black':blackBackgroundImages, 'White':whiteBackgroundImages},
+						'name': '%s\%d_%d_RED.png' % (outputFolder, n, xrotation / -15)
+					})
+					threads.append(thread)
+					thread.start()
+				if teamColours:
+					# def blend(images, name, teamColors=False):
+					thread = Thread(target=blend, kwargs={
+						'images': {'Black':imgBlackBGRED, 'White'imgWhiteBGRED},
+						'name': '%s\%d_%d_RED.png' % (outputFolder, n, xrotation / -15)
+					})
+					threads.append(thread)
+					thread.start()
+					thread = Thread(target=blend, kwargs={
+						'images': {'Black':imgBlackBGBLU, 'White'imgWhiteBGBLU},
+						'name': '%s\%d_%d_BLU.png' % (outputFolder, n, xrotation / -15)
+					})
+					threads.append(thread)
+					thread.start()
 				else:
-					if teamColours:
-						blendingMachine(xrotation, n, {'RED':imgBlackBGRED,'BLU':imgBlackBGBLU}, {'RED':imgWhiteBGRED,'BLU':imgWhiteBGBLU}, outputFolder, False, True)
-					else:
-						blendingMachine(xrotation, n, imgBlackBG, imgWhiteBG, outputFolder, False, False)
+					thread = Thread(target=blend, kwargs={
+						'images': {'Black':imgBlackBG, 'White':imgWhiteBG},
+						'name': '%s\%d_%d' % (outputFolder, n, xrotation / -15)
+					})
+					threads.append(thread)
+					thread.start()
 				# Close HLMV
 				closeHLMV()
 				# Check for kill switch
@@ -404,7 +365,8 @@ def automateDis(model,
 					print 'Successfully terminated'
 					sys.exit(0)
 		n += 1
-	blendingMachine() # Wait for threads to finish, if any
+	for thread in threads:
+		thread.join() # Wait for threads to finish, if any
 	# Stitch images together
 	print 'Stitching images together...'
 	stitchPool = threadpool(numThreads=2, defaultTarget=stitch)
