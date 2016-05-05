@@ -86,7 +86,7 @@ def paintHat(colour, VMTFile):
 def getBrightness(p):
 	return (299.0 * p[0] + 587.0 * p[1] + 114.0 * p[2]) / 1000.0
 
-def toAlphaBlackWhite(blackImg, whiteImg):
+def blend(blackImg, whiteImg, name):
 	size = blackImg.size
 	blackImg = blackImg.convert('RGBA')
 	loadedBlack = blackImg.load()
@@ -101,7 +101,7 @@ def toAlphaBlackWhite(blackImg, whiteImg):
 				(blackPixel[2] + whitePixel[2]) / 2,
 				int(255.0 - 255.0 * (getBrightness(whitePixel) - getBrightness(blackPixel)))
 			)
-	return blackImg
+	blackImg.save(name, 'PNG')
 
 def rotateAboutNewCentre(x, y, z, rotOffset, yAngle, xAngle):
 	""" Method to position a model in HLMV with a new center of rotation.
@@ -143,10 +143,6 @@ def offsetVertically(x, y, z, vertOffset, yAngle, xAngle):
 	x += sin(xAngle) * (sin(yAngle) * vertOffset
 	y += sin(xAngle) * (sin(yAngle) * vertOffset
 	return [x, y, z]
-
-def blend(images, name, teamColors=False):
-	img = toAlphaBlackWhite(images['Black'], images['White'])
-	img.save(name, 'PNG')
 
 def automateDis(model,
 				numberOfImages=24,
@@ -331,29 +327,33 @@ def automateDis(model,
 				# Remove background from images
 				global threads
 				if paint:
+					for colour in whiteBackgroundImages:
+						thread = Thread(target=blend, kwargs={
+							'blackImg': blackBackgroundImages[colour],
+							'whiteImg': whiteBackgroundImages[colour],
+							'name': '%s\%d_%d_%s.png' % (outputFolder, n, xrotation / -15, paintHexDict[colour])
+						})
+						threads.append(thread)
+						thread.start()
+				elif teamColours:
 					thread = Thread(target=blend, kwargs={
-						'images': {'Black':blackBackgroundImages, 'White':whiteBackgroundImages},
+						'blackImg': imgBlackBGRED,
+						'whiteImg': imgWhiteBGRED,
 						'name': '%s\%d_%d_RED.png' % (outputFolder, n, xrotation / -15)
 					})
 					threads.append(thread)
 					thread.start()
-				if teamColours:
-					# def blend(images, name, teamColors=False):
 					thread = Thread(target=blend, kwargs={
-						'images': {'Black':imgBlackBGRED, 'White'imgWhiteBGRED},
-						'name': '%s\%d_%d_RED.png' % (outputFolder, n, xrotation / -15)
-					})
-					threads.append(thread)
-					thread.start()
-					thread = Thread(target=blend, kwargs={
-						'images': {'Black':imgBlackBGBLU, 'White'imgWhiteBGBLU},
+						'blackImg': imgBlackBGBLU,
+						'whiteImg': imgWhiteBGBLU,
 						'name': '%s\%d_%d_BLU.png' % (outputFolder, n, xrotation / -15)
 					})
 					threads.append(thread)
 					thread.start()
 				else:
 					thread = Thread(target=blend, kwargs={
-						'images': {'Black':imgBlackBG, 'White':imgWhiteBG},
+						'blackImg': imgBlackBG,
+						'whiteImg': imgWhiteBG,
 						'name': '%s\%d_%d' % (outputFolder, n, xrotation / -15)
 					})
 					threads.append(thread)
