@@ -38,27 +38,18 @@ threadedBlending = True # Use threading for blending computations
 sleepFactor = 1.0 # Sleep time factor that affects how long the script waits for HLMV to load/models to load etc
 
 def openHLMV(pathToHlmv):
-	Popen([pathToHlmv + sep + 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
+	Popen([pathToHlmv + sep + 'hlmv.exe', '-game', pathToHlmv[:-4]+'\\tf\\'])
 
 def closeHLMV():
-	Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
+	Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'])
 
 def prepareHLMV():
-	window_list = []
 	def enum_callback(hwnd, results):
-		window_list.append((hwnd, GetWindowText(hwnd)))
+		if GetWindowText(hwnd)[:22] == 'Half-Life Model Viewer':
+			SetForegroundWindow(hwnd)
+			ShowWindow(hwnd, win32con.SW_MAXIMIZE)
 
 	EnumWindows(enum_callback, [])
-
-	handle_id = None
-	for hwnd, title in window_list:
-		if 'half-life model viewer' in title.lower():
-			handle_id = hwnd
-			break
-	SetForegroundWindow(handle_id)
-	ShowWindow(handle_id, win32con.SW_MAXIMIZE)
-
-def sleep(sleeptime):
 
 def paintHat(colour, VMTFile):
 	vmt = open(VMTFile, 'rb').read()
@@ -84,7 +75,7 @@ def paintHat(colour, VMTFile):
 	sleep(sleeptime*sleepFactor)
 
 def getBrightness(p):
-	return (299.0 * p[0] + 587.0 * p[1] + 114.0 * p[2]) / 1000.0
+	return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
 
 def blend(blackImg, whiteImg, name):
 	size = blackImg.size
@@ -140,8 +131,8 @@ def offsetVertically(x, y, z, vertOffset, yAngle, xAngle):
 	yAngle *= degreesToRadiansFactor
 	xAngle *= degreesToRadiansFactor
 
-	x += sin(xAngle) * (sin(yAngle) * vertOffset
-	y += sin(xAngle) * (sin(yAngle) * vertOffset
+	x += sin(xAngle) * sin(yAngle) * vertOffset
+	y += sin(xAngle) * sin(yAngle) * vertOffset
 	return [x, y, z]
 
 def automateDis(model,
@@ -186,10 +177,11 @@ def automateDis(model,
 	folder = raw_input('Folder name for created images: ')
 	outputFolder = outputImagesDir + sep + folder
 	try:
-		os.makedirs(outputFolder)
-	except:
+		makedirs(outputFolder)
+	except WindowsError:
 		answer = raw_input('Folder already exists, overwrite files? y\\n? ')
 		if answer.lower() in ['no', 'n']:
+			import sys
 			sys.exit(1)
 
 	if initialTranslation is None:
@@ -212,20 +204,20 @@ def automateDis(model,
 	model.setNormalMapping(True)
 	model.setBGColour(255, 255, 255, 255)
 	for yrotation in range((-180 + (360/numberOfImages * n)), 180, 360/numberOfImages):
-		print 'n =', str(n)
+		print 'n =', n
 		for xrotation in range(-15, 30, 15):
 			if (verticalRotations == 0 and xrotation == 0) or verticalRotations == 1:
 				# Set rotation
 				sleep(0.5)
 				model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]), z = initialRotation[2])
-				print 'xRot = {0}, yRot = {1}'.format(xrotation, yrotation)
-				if rotationOffset is not None:
+				print 'xRot =', xrotation, 'yRot =', yrotation
+				if rotationOffset:
 					# Set translation to account for off centre rotation
 					result = rotateAboutNewCentre(initialTranslation[0], initialTranslation[1], initialTranslation[2], rotationOffset, yrotation, xrotation)
 					print 'translation =', result
 					model.setTranslation(x = result[0], y = result[1], z = result[2])
 					# Set translation to account for off centre horizontal rotation
-				elif verticalOffset is not None:
+				elif verticalOffset:
 					result = offsetVertically(initialTranslation[0], initialTranslation[1], initialTranslation[2], verticalOffset, yrotation, xrotation)
 					print 'translation =', result
 					model.setTranslation(x = result[0], y = result[1], z = result[2])
@@ -354,7 +346,7 @@ def automateDis(model,
 					thread = Thread(target=blend, kwargs={
 						'blackImg': imgBlackBG,
 						'whiteImg': imgWhiteBG,
-						'name': '%s\%d_%d' % (outputFolder, n, xrotation / -15)
+						'name': '%s\%d_%d.png' % (outputFolder, n, xrotation / -15)
 					})
 					threads.append(thread)
 					thread.start()
