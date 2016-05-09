@@ -1,21 +1,21 @@
 from mouse import click # 300
-from os import sep # Various
+from os import sep, makedirs # Various, 186
 from subprocess import Popen, PIPE # 38, 41
 from math import sin, cos, pi # 29, 104, 125
 from imgpie import wrap # 179, 180
 from time import time, sleep # 59, 263, 481
 from win32api import GetKeyState
 from win32gui import EnumWindows, GetWindowText, SetForegroundWindow, ShowWindow # 44
+from hashlib import md5
 from HLMVModel import HLMVModelRegistryKey # 486
 from Stitch import stitch # 416
 from SendKeys import SendKeys # Various
 from screenshot import screenshot
 from threadpool import threadpool
-import Image
-import threading
+from threading import Thread
+from wikitools import wiki
+from wikitools.wikifile import File
 import win32con
-import uploadFile
-import scriptconstants
 try:
 	import psyco
 	psyco.full()
@@ -23,29 +23,32 @@ except:
 	pass
 
 global threads
-threads = []
-
+threads = [] # Used to track the threads used for blending
 degreesToRadiansFactor = pi / 180.0
 outputImagesDir = r'output' # The directory where the output images will be saved.
-SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Launcher. This is near the top left of the screen by default.
-monitorResolution = [1920, 1080] # The monitor resolution of the user in the form of a list; [pixel width, pixel height].
-imgCropBoundaries = (1, 42, 1919, 799) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
+imgCropBoundaries = (1, 42, 1279, 515) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
 fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
 sleepFactor = 1.0 # Sleep time factor that affects how long the script waits for HLMV to load/models to load etc
+wiki = wiki.Wiki('http://wiki.teamfortress.com/w/api.php')
 
-def openHLMV(pathToHlmv):
-	Popen([pathToHlmv + sep + 'hlmv.exe', '-game', pathToHlmv[:-4]+'\\tf\\'])
+def uploadFile(title):
+	hash = md5(title.replace(' ', '_')).hexdigest()
+	url = 'http://wiki.teamfortress.com/w/images/%s/%s/' % (hash[:1], hash[:2], title.replace(' ', '_'))
+	description = open('%s\\%s offsetmap.txt' % (outputFolder, title), 'rb').read()
+	description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
 
-def closeHLMV():
-	Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'])
-
-def prepareHLMV():
-	def enum_callback(hwnd, results):
-		if GetWindowText(hwnd)[:22] == 'Half-Life Model Viewer':
-			SetForegroundWindow(hwnd)
-			ShowWindow(hwnd, win32con.SW_MAXIMIZE)
-
-	EnumWindows(enum_callback, [])
+	with open(title, 'rb') as f:
+		target = File(wiki, title)
+		ignorewarnings = False
+		if target.exists:
+			answer = raw_input('File already exists, ovewrite?  y\\n? ')
+			if answer.lower() in ['yes', 'y']:
+				ignorewarnings = True		
+		print 'Uploading', file, 'as', title, '...'
+		res = target.upload(f, text=description, ignorewarnings=ignorewarnings)
+		if res['upload']['result'] == 'Warning':
+			print 'Failed for file: ', file
+			print res['upload']['message']
 
 def getBrightness(p):
 	return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
@@ -140,8 +143,6 @@ def automateDis(model,
 				itemName -> The name of the item. Optional, default is blank.
 				REDVMTFiles -> The RED vmt file locations. Optional, default is none.
 				BLUVMTFiles -> The BLU vmt file locations. Optional, default is none.
-				wikiUsername -> wiki.tf2.com username. Optional, default is none.
-				wikiPassword -> wiki.tf2.com password. Optional, default is none.
 	"""
 
 	folder = raw_input('Folder name for created images: ')
@@ -163,7 +164,7 @@ def automateDis(model,
 	sleep(3)
 
 	try:
-		closeHLMV()
+		Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'])
 		sleep(2.0)
 	except:
 		pass
@@ -192,11 +193,15 @@ def automateDis(model,
 					print 'translation =', result
 					model.setTranslation(x = result[0], y = result[1], z = result[2])
 				# Open HLMV
-				openHLMV(pathToHlmv)
+				Popen([pathToHlmv + sep + 'hlmv.exe', '-game', pathToHlmv[:-4]+'\\tf\\'])
 				sleep(2)
 				# Focus and maximise HLMV
-				prepareHLMV()
-				# Open recent model
+				def enum_callback(hwnd, results):
+					if GetWindowText(hwnd)[:22] == 'Half-Life Model Viewer':
+						SetForegroundWindow(hwnd)
+						ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+				EnumWindows(enum_callback, [])
+				# Open most recent model
 				click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
 				SendKeys(r'{UP 2}{RIGHT}{ENTER}')
 				sleep(1)
@@ -257,7 +262,7 @@ def automateDis(model,
 					threads.append(thread)
 					thread.start()
 				# Close HLMV
-				closeHLMV()
+				Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'])
 				# Check for kill switch
 				killKeyState = GetKeyState(win32con.VK_CAPITAL)
 				if killKeyState in [1, -127]:
@@ -280,25 +285,17 @@ def automateDis(model,
 	stitchPool.shutdown()
 	# Upload images to wiki
 	if teamColours:
-		finalREDImageName = itemName + ' RED 3D.jpg'
-		finalBLUImageName = itemName + ' BLU 3D.jpg'
-		url = uploadFile.fileURL(finalREDImageName)
-		url2 = uploadFile.fileURL(finalBLUImageName)
-		description = open(outputFolder + sep + finalREDImageName + ' offsetmap.txt', 'rb').read()
-		description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
-		description2 = open(outputFolder + sep + finalBLUImageName + ' offsetmap.txt', 'rb').read()
-		description2 = description2.replace('url = <nowiki></nowiki>','url = <nowiki>' + url2 + '</nowiki>')
-		uploadFile.uploadFile(outputFolder + sep + finalREDImageName, finalREDImageName, description, wikiUsername, wikiPassword)
-		uploadFile.uploadFile(outputFolder + sep + finalBLUImageName, finalBLUImageName, description2, wikiUsername, wikiPassword)
+		uploadFile(itemName + ' RED 3D.jpg')
+		uploadFile(itemName + ' BLU 3D.jpg')
 	else:
-		finalImageName = itemName + ' 3D.jpg'
-		uploadFile.uploadFile(outputFolder, imageName + ' 3D.jpg')
+		uploadFile(itemName + ' 3D.jpg')
 	# All done yay
 	print '\nAll done'
 
 if __name__ == '__main__':
 	# Poot values here
 	starttime = time()
+	wiki.login('darkid')
 	
 	# Example usage
 	model = HLMVModelRegistryKey('models.weapons.c_models.urinejar.mdl')
@@ -316,7 +313,6 @@ if __name__ == '__main__':
 				itemName = 'User Darkid Test',
 				REDVMTFiles = [],#r'F:\Steam\steamapps\common\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap.vmt'],
 				BLUVMTFiles = [],#r'F:\Steam\steamapps\common\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap_blue.vmt'],
-				wikiUsername = 'darkid'
 				)
 
-	print 'completed in ' + str(int(time() - starttime)) + 'seconds'
+	print 'completed in', int(time() - starttime), 'seconds'
