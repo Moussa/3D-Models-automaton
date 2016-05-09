@@ -1,21 +1,19 @@
-from hashlib import md5
-from HLMVModel import HLMVModelRegistryKey # 486
+from hashlib import md5 # 34
+from HLMVModel import HLMVModelRegistryKey # 298
 from ImageGrab import grab # Various
-from imgpie import wrap # 179, 180
-from math import cos, pi, sin # 29, 104, 125
-from mouse import click # 300
-from os import makedirs, sep # Various, 186
-from subprocess import Popen, PIPE #
-from time import time, sleep # 59, 263, 481
-from Stitch import stitch # 416
+from math import cos, pi, sin # 25, 70, 91
+from os import makedirs, sep # Various, 
+from subprocess import Popen, PIPE # 166, 193, 265
+from time import time, sleep # Various, 296, 316
+from Stitch import stitch # 275
 from SendKeys import SendKeys # Various
-from threadpool import threadpool
-from threading import Thread
-from wikitools import wiki
-from wikitools.wikifile import File
-from win32api import GetKeyState
+from threadpool import threadpool # 275
+from threading import Thread # 226, 257
+from wikitools import wiki # 30
+from wikitools.wikifile import File # 38
+from win32api import GetKeyState, mouse_event, SetCursorPos # 
 import win32con
-from win32gui import EnumWindows, GetWindowText, SetForegroundWindow, ShowWindow # 44
+from win32gui import EnumWindows, GetWindowText, SetForegroundWindow, ShowWindow # 195-199
 try:
 	import psyco
 	psyco.full()
@@ -37,18 +35,17 @@ def uploadFile(outputFolder, title):
 	description = open('%s\\%s offsetmap.txt' % (outputFolder, title), 'rb').read()
 	description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
 
-	with open(title, 'rb') as f:
-		target = File(wiki, title)
-		ignorewarnings = False
-		if target.exists:
-			answer = raw_input('File already exists, ovewrite?  y\\n? ')
-			if answer.lower() in ['yes', 'y']:
-				ignorewarnings = True		
-		print 'Uploading', file, 'as', title, '...'
-		res = target.upload(f, text=description, ignorewarnings=ignorewarnings)
-		if res['upload']['result'] == 'Warning':
-			print 'Failed for file: ', file
-			print res['upload']['message']
+	target = File(wiki, title)
+	ignorewarnings = False
+	if target.exists:
+		answer = raw_input('File already exists, ovewrite?  y\\n? ')
+		if answer.lower() in ['yes', 'y']:
+			ignorewarnings = True		
+	print 'Uploading', file, 'as', title, '...'
+	res = target.upload(file, text=description, ignorewarnings=ignorewarnings)
+	if res['upload']['result'] == 'Warning':
+		print 'Failed for file: ', file
+		print res['upload']['message']
 
 def getBrightness(p):
 	return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
@@ -164,11 +161,9 @@ def automateDis(model,
 	# Time for user to cancel script start
 	sleep(3)
 
-	try:
-		Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'])
-		sleep(2.0)
-	except:
-		pass
+	# Close HLMV, in case it's already open. Suppress all responses.
+	Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stderr=PIPE, stdout=PIPE)
+	sleep(2.0)
 	print 'initialTranslation =', initialTranslation
 	print 'initialRotation =', initialRotation
 	
@@ -203,7 +198,10 @@ def automateDis(model,
 						ShowWindow(hwnd, win32con.SW_MAXIMIZE)
 				EnumWindows(enum_callback, [])
 				# Open most recent model
-				click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
+				x, y = fileButtonCoordindates
+				SetCursorPos((x,y))
+				mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, x, y, 0, 0)
+				mouse_event(win32con.MOUSEEVENTF_LEFTUP, x, y, 0, 0)
 				SendKeys(r'{UP 2}{RIGHT}{ENTER}')
 				sleep(1)
 				# If user wants to pose model before taking screenshot, make script wait
@@ -263,10 +261,9 @@ def automateDis(model,
 					threads.append(thread)
 					thread.start()
 				# Close HLMV
-				Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'])
+				Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stderr=PIPE)
 				# Check for kill switch
-				killKeyState = GetKeyState(win32con.VK_CAPITAL)
-				if killKeyState in [1, -127]:
+				if GetKeyState(win32con.VK_CAPITAL) in [1, -127]:
 					print 'Successfully terminated'
 					sys.exit(0)
 		n += 1
@@ -294,11 +291,10 @@ def automateDis(model,
 	print '\nAll done'
 
 if __name__ == '__main__':
-	# Poot values here
-	starttime = time()
 	wiki.login('darkid')
+	starttime = time()
 	
-	# Example usage
+	# Poot values here
 	model = HLMVModelRegistryKey('models.weapons.c_models.urinejar.mdl')
 	automateDis(model = model,
 				numberOfImages = 6,
@@ -307,8 +303,8 @@ if __name__ == '__main__':
 				verticalOffset = None,
 				verticalRotations = 0,
 				screenshotPause = False,
-				initialRotation = (0.000000, 0.000000, 0.000000),
-				initialTranslation = (30.055614, 0.000000, 1.605678),
+#				initialRotation = (0.000000, 0.000000, 0.000000),
+#				initialTranslation = (30.055614, 0.000000, 1.605678),
 				teamColours = False,
 				pathToHlmv = r'F:\Steam\steamapps\common\Team Fortress 2\bin',
 				itemName = 'User Darkid Test',
