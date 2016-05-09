@@ -2,7 +2,7 @@ from hashlib import md5 # 34
 from HLMVModel import HLMVModelRegistryKey # 298
 from ImageGrab import grab # Various
 from math import cos, pi, sin # 25, 70, 91
-from os import makedirs, sep # Various, 
+from os import makedirs, sep # Various
 from subprocess import Popen, PIPE # 166, 193, 265
 from time import time, sleep # Various, 296, 316
 from Stitch import stitch # 275
@@ -11,7 +11,8 @@ from threadpool import threadpool # 275
 from threading import Thread # 226, 257
 from wikitools import wiki # 30
 from wikitools.wikifile import File # 38
-from win32api import GetKeyState, mouse_event, SetCursorPos # 
+from wikitools.page import Page # 38
+from win32api import GetKeyState, mouse_event, SetCursorPos
 import win32con
 from win32gui import EnumWindows, GetWindowText, SetForegroundWindow, ShowWindow # 195-199
 try:
@@ -23,29 +24,35 @@ except:
 global threads
 threads = [] # Used to track the threads used for blending
 degreesToRadiansFactor = pi / 180.0
+wiki = wiki.Wiki('http://wiki.teamfortress.com/w/api.php')
 outputImagesDir = r'output' # The directory where the output images will be saved.
 imgCropBoundaries = (1, 42, 1279, 515) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
 fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
 #sleepFactor = 1.0 # Sleep time factor that affects how long the script waits for HLMV to load/models to load etc
-wiki = wiki.Wiki('http://wiki.teamfortress.com/w/api.php')
 
 def uploadFile(outputFolder, title):
 	hash = md5(title.replace(' ', '_')).hexdigest()
 	url = 'http://wiki.teamfortress.com/w/images/%s/%s/%s' % (hash[:1], hash[:2], title.replace(' ', '_'))
+	file = open('%s\\%s' % (outputFolder, title), 'rb')
 	description = open('%s\\%s offsetmap.txt' % (outputFolder, title), 'rb').read()
 	description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
 
+	print 'Uploading', title, '...'
 	target = File(wiki, title)
-	ignorewarnings = False
 	if target.exists:
-		answer = raw_input('File already exists, ovewrite?  y\\n? ')
-		if answer.lower() in ['yes', 'y']:
-			ignorewarnings = True		
-	print 'Uploading', file, 'as', title, '...'
-	res = target.upload(file, text=description, ignorewarnings=ignorewarnings)
-	if res['upload']['result'] == 'Warning':
-		print 'Failed for file: ', file
-		print res['upload']['message']
+		answer = raw_input('File already exists, ovewrite? y\\n? ')
+		ignorewarnings = answer.lower() in ['yes', 'y']:
+		res = target.upload(file, ignorewarnings=ignorewarnings)
+		if res['upload']['result'] == 'Warning':
+			print 'Failed for file: ', title
+			print res['upload']['message']
+		else:
+			Page(wiki, title).edit(text=description)
+	else:
+		res = target.upload(file, comment=description)
+		if res['upload']['result'] == 'Warning':
+			print 'Failed for file: ', title
+			print res['upload']['message']
 
 def getBrightness(p):
 	return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
@@ -55,6 +62,12 @@ def blend(blackImg, whiteImg, name):
 	blackImg = blackImg.convert('RGBA')
 	loadedBlack = blackImg.load()
 	loadedWhite = whiteImg.load()
+	print loadedBlack[0, 0]
+	# User got it backwards, the (current) cropping method won't work.
+	if loadedBlack[0, 0] == (0, 0, 0, 255):
+		temp = loadedWhite
+		loadedWhite = loadedBlack
+		loadedBlack = temp
 	for x in range(size[0]):
 		for y in range(size[1]):
 			blackPixel = loadedBlack[x, y]
@@ -260,8 +273,8 @@ def automateDis(model,
 					})
 					threads.append(thread)
 					thread.start()
-				# Close HLMV
-				Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stderr=PIPE)
+				# Close HLMV, supress success message
+				Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE)
 				# Check for kill switch
 				if GetKeyState(win32con.VK_CAPITAL) in [1, -127]:
 					print 'Successfully terminated'
