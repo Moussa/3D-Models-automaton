@@ -1,4 +1,4 @@
-import os, Image, ImageFile, sys, numpy
+import os, Image, ImageFile, numpy
 try:
 	import psyco
 	psyco.full()
@@ -10,12 +10,11 @@ from threading import Thread
 
 targetDimension = 280
 targetSize = 512 * 1024 # 512 KB
-global maxFrameSize, minCrop, cropped, crops, fullDimensions
+global maxFrameSize, minCrop, cropped, crops
 maxFrameSize = [0, 0]
-minCrop = [sys.maxint, sys.maxint, sys.maxint, sys.maxint]
+minCrop = [999999, 999999, 999999, 999999]
 cropped = []
 crops = {}
-fullDimensions = (0, 0)
 _imageDtype = numpy.dtype('i')
 
 # Finds the closest-cropped lines that are all white.
@@ -25,7 +24,7 @@ def cropTask(i, s, filename):
 	horizontal = alpha.any(axis=0).nonzero()[0]
 	vertical = alpha.any(axis=1).nonzero()[0]
 	cropping = (horizontal[0], vertical[0], horizontal[-1], vertical[-1])
-	global maxFrameSize, minCrop, cropped, crops, fullDimensions
+	global maxFrameSize, minCrop, cropped, crops
 	size = img.size[:]
 	newI = img.crop(cropping)
 	if size[0] > maxFrameSize[0]:
@@ -42,7 +41,6 @@ def cropTask(i, s, filename):
 		minCrop[2] = size[0] - cropping[2]
 	if size[1] - cropping[3] < minCrop[3]:
 		minCrop[3] = size[1] - cropping[3]
-	fullDimensions = (fullDimensions[0] + newI.size[0], max(fullDimensions[1], newI.size[1]))
 
 def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 	outpootFile = imagesDir + os.sep + outpootFile
@@ -59,7 +57,7 @@ def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 			threads.append(thread)
 	for thread in threads:
 		thread.join()
-	global maxFrameSize, minCrop, cropped, crops, fullDimensions
+	global maxFrameSize, minCrop, cropped, crops
 	print 'Minimum crop size:', minCrop
 	maxFrameSize = (maxFrameSize[0] - minCrop[0] - minCrop[2], maxFrameSize[1] - minCrop[1] - minCrop[3])
 	print 'Max frame size, including cropped area:', maxFrameSize
@@ -109,7 +107,4 @@ def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 {{Externally linked}}''' % (currentOffset, rescaledMaxSize[0], finalSize[1], xRotNum*2 + 1, ','.join([str(o) for o in offsetMap]), targetDimension))
 	h.close()
 	print 'Offset map saved to ' + outpootFile + ' offsetmap.txt'
-
-if __name__=='__main__':
-	if len(sys.argv) > 1:
-		stitch(sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]))
+	

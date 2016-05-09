@@ -49,7 +49,7 @@ def uploadFile(outputFolder, title):
 			print 'Failed for file: ', title
 			print res['upload']['message']
 		else:
-			Page(wiki, title).edit(text=description)
+			print Page(wiki, title).edit(text=description)
 	else:
 		res = target.upload(file, comment=description)
 		if res['upload']['result'] == 'Warning':
@@ -130,9 +130,7 @@ def automateDis(model,
 				pathToHlmv='',
 				itemName='',
 				REDVMTFiles=None,
-				BLUVMTFiles=None,
-				wikiUsername=None,
-				wikiPassword=None):
+				BLUVMTFiles=None):
 	""" Method to automize process of taking images for 3D model views. 
 	
 		Parameters:
@@ -239,16 +237,12 @@ def automateDis(model,
 				threads.append(thread)
 				thread.start()
 				if teamColours:
-					# Change weapon colour to BLU
-					redFiles = []
-					bluFiles = []
-					for fileName in REDVMTFiles:
-						redFiles.append(open(fileName, 'rb').read())
-					for fileName in BLUVMTFiles:
-						bluFiles.append(open(fileName, 'rb').read())
-					for file, fileName in zip(bluFiles, redFileNames):
-						with open(fileName, 'wb') as f:
-							f.write(file)
+					# Save red VMT files
+					redFiles = [open(f, 'rb').read() for f in REDVMTFiles]
+					# Overwrite the red VMT files with the blu VMT contents to change the weapon colour to BLU
+					for bluFileName, redFileName in zip(BLUVMTFiles, REDVMTFiles):
+						with open(redFileName, 'wb') as redFile and open(bluFileName, 'rb') as bluFile:
+							redFile.write(bluFile.read())
 					SendKeys(r'{F5}')
 					sleep(1.0)
 					# Take whiteBG screenshot and crop
@@ -257,10 +251,10 @@ def automateDis(model,
 					SendKeys(r'^b')
 					# Take blackBG screenshot and crop
 					imgBlackBG = grab().crop(imgCropBoundaries)
-					# Return VMT back to RED
-					for file, fileName in zip(bluFiles, redFileNames):
-						with open(fileName, 'wb') as f:
-							f.write(file)
+					# Replace the red VMT files with our saved copy to change the weapon colour back to RED
+					for redFileName, redFileContents in zip(REDVMTFILES, redFiles):
+						with open(redFileName, 'wb') as redFile:
+							redFile.write(redFileContents)
 					# Remove background from images
 					thread = Thread(target=blend, kwargs={
 						'blackImg': imgBlackBG,
