@@ -1,72 +1,67 @@
-import os, Image, ImageFile, sys, threading, threadpool, numpy
+import os, Image, ImageFile, sys, numpy
 try:
 	import psyco
 	psyco.full()
 except:
 	pass
 
+from threading import Thread
+# This pool should NOT use multiprocessing in order to avoid copying huge image objects around from process to process
+
 targetDimension = 280
 targetSize = 512 * 1024 # 512 KB
-
+global maxFrameSize, minCrop, cropped, crops, fullDimensions
+maxFrameSize = [0, 0]
+minCrop = [sys.maxint, sys.maxint, sys.maxint, sys.maxint]
+cropped = []
+crops = {}
+fullDimensions = (0, 0)
 _imageDtype = numpy.dtype('i')
-def autocrop(img):
+
+# Finds the closest-cropped lines that are all white.
+def cropTask(i, s, filename):
+	img = Image.open(filename).convert('RGBA')
 	alpha = numpy.array(img, dtype=_imageDtype)[:,:,3]
 	horizontal = alpha.any(axis=0).nonzero()[0]
 	vertical = alpha.any(axis=1).nonzero()[0]
 	cropping = (horizontal[0], vertical[0], horizontal[-1], vertical[-1])
-	return (img.crop(cropping), cropping)
-
-def cropTask(i, s, filename):
-	# print 'Processing:', filename
-	img = Image.open(filename).convert('RGBA')
-	newI, cropping = autocrop(img)
-	return i, s, img.size[:], newI, cropping
+	global maxFrameSize, minCrop, cropped, crops, fullDimensions
+	size = img.size[:]
+	newI = img.crop(cropping)
+	if size[0] > maxFrameSize[0]:
+		maxFrameSize[0] = size[0]
+	if size[1] > maxFrameSize[1]:
+		maxFrameSize[1] = size[1]
+	cropped.append(newI)
+	crops[newI] = cropping
+	if cropping[0] < minCrop[0]:
+		minCrop[0] = cropping[0]
+	if cropping[1] < minCrop[1]:
+		minCrop[1] = cropping[1]
+	if size[0] - cropping[2] < minCrop[2]:
+		minCrop[2] = size[0] - cropping[2]
+	if size[1] - cropping[3] < minCrop[3]:
+		minCrop[3] = size[1] - cropping[3]
+	fullDimensions = (fullDimensions[0] + newI.size[0], max(fullDimensions[1], newI.size[1]))
 
 def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 	outpootFile = imagesDir + os.sep + outpootFile
 	print 'Cropping frames...'
-	fullDimensions = (0, 0)
-	maxFrameSize = (None, None)
-	cropped = []
-	croppedNames = {}
-	crops = {}
-	minLeftCrop = None
-	minTopCrop = None
-	minRightCrop = None
-	minBottomCrop = None
-	# This pool should NOT use multiprocessing in order to avoid copying huge image objects around from process to process
-	cropPool = threadpool.threadpool(numThreads=6, defaultTarget=cropTask, multiprocess=False)
-	for i in xrange(yRotNum):
-		for s in xrange(-xRotNum, xRotNum + 1):
-			filename = imagesDir + os.sep + str(i) + '_' + str(s) + '.png'
-			cropPool(i, s, filename)
-	results = cropPool.shutdown()
-	orderedResults = {}
-	for result in results:
-		if result['exception'] is not None:
-			raise result['exception']
-		i, s, size, newI, cropping = result['result']
-		orderedResults[(i, s)] = (size, newI, cropping)
-	for i in xrange(yRotNum):
-		for s in xrange(-xRotNum, xRotNum + 1):
-			size, newI, cropping = orderedResults[(i, s)]
-			maxFrameSize = (max(maxFrameSize[0], size[0]), max(maxFrameSize[1], size[1]))
-			cropped.append(newI)
-			croppedNames[newI] = filename
-			crops[newI] = cropping
-			if minLeftCrop is None or cropping[0] < minLeftCrop:
-				minLeftCrop = cropping[0]
-			if minTopCrop is None or cropping[1] < minTopCrop:
-				minTopCrop = cropping[1]
-			rightCrop = size[0] - cropping[2]
-			if minRightCrop is None or rightCrop < minRightCrop:
-				minRightCrop = rightCrop
-			bottomCrop = size[1] - cropping[3]
-			if minBottomCrop is None or bottomCrop < minBottomCrop:
-				minBottomCrop = bottomCrop
-			fullDimensions = (fullDimensions[0] + newI.size[0], max(fullDimensions[1], newI.size[1]))
-	print 'Minimum crop size:', (minLeftCrop, minTopCrop, minRightCrop, minBottomCrop)
-	maxFrameSize = (maxFrameSize[0] - minLeftCrop - minRightCrop, maxFrameSize[1] - minTopCrop - minBottomCrop)
+	threads = []
+	for i in range(yRotNum):
+		for s in range(-xRotNum, xRotNum + 1):
+			thread = Thread(target=cropTask, kwargs={
+				'i': i,
+				's': s,
+				'filename': '%s\%d_%d.png' % (imagesDir, i, s)
+			})
+			thread.start()
+			threads.append(thread)
+	for thread in threads:
+		thread.join()
+	global maxFrameSize, minCrop, cropped, crops, fullDimensions
+	print 'Minimum crop size:', minCrop
+	maxFrameSize = (maxFrameSize[0] - minCrop[0] - minCrop[2], maxFrameSize[1] - minCrop[1] - minCrop[3])
 	print 'Max frame size, including cropped area:', maxFrameSize
 	targetRatio = float(targetDimension) / float(max(maxFrameSize))
 	print 'Target scaling ratio:', targetRatio
@@ -77,11 +72,11 @@ def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 	normalizedLeftCrops = {}
 	normalizedTopCrops = {}
 	for f in cropped:
-		newSize = (int(round(float(f.size[0]) * targetRatio)), int(round(float(f.size[1]) * targetRatio)))
+		newSize = (int(f.size[0] * targetRatio), int(f.size[1] * targetRatio))
 		resImg = f.resize(newSize, Image.ANTIALIAS)
 		resized.append(resImg)
-		normalizedLeftCrops[resImg] = int(round(float(crops[f][0] - minLeftCrop) * targetRatio))
-		normalizedTopCrops[resImg] = int(round(float(crops[f][1] - minTopCrop) * targetRatio))
+		normalizedLeftCrops[resImg] = int((crops[f][0] - minCrop[0]) * targetRatio)
+		normalizedTopCrops[resImg] = int((crops[f][1] - minCrop[1]) * targetRatio)
 		finalSize = (finalSize[0] + newSize[0] + 1, max(finalSize[1], newSize[1] + normalizedTopCrops[resImg]))
 	finalSize = (finalSize[0] - 1, finalSize[1])
 	print 'Rescaling done, building final image.'

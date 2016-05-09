@@ -7,7 +7,6 @@ from subprocess import Popen, PIPE # 166, 193, 265
 from time import time, sleep # Various, 296, 316
 from Stitch import stitch # 275
 from SendKeys import SendKeys # Various
-from threadpool import threadpool # 275
 from threading import Thread # 226, 257
 from wikitools import wiki # 30
 from wikitools.wikifile import File # 38
@@ -31,11 +30,13 @@ fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in 
 #sleepFactor = 1.0 # Sleep time factor that affects how long the script waits for HLMV to load/models to load etc
 
 def uploadFile(outputFolder, title):
+	if not wiki.isLoggedIn():
+		return
 	hash = md5(title.replace(' ', '_')).hexdigest()
 	url = 'http://wiki.teamfortress.com/w/images/%s/%s/%s' % (hash[:1], hash[:2], title.replace(' ', '_'))
 	file = open('%s\\%s' % (outputFolder, title), 'rb')
 	description = open('%s\\%s offsetmap.txt' % (outputFolder, title), 'rb').read()
-	description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
+	description = description.replace('url = <nowiki></nowiki>', 'url = <nowiki>' + url + '</nowiki>')
 
 	print 'Uploading', title, '...'
 	target = File(wiki, title)
@@ -43,6 +44,7 @@ def uploadFile(outputFolder, title):
 		answer = raw_input('File already exists, ovewrite? y\\n? ')
 		ignorewarnings = answer.lower() in ['yes', 'y']
 		res = target.upload(file, ignorewarnings=ignorewarnings)
+		print res
 		if res['upload']['result'] == 'Warning':
 			print 'Failed for file: ', title
 			print res['upload']['message']
@@ -59,8 +61,9 @@ def getBrightness(p):
 
 def blend(blackImg, whiteImg, name):
 	size = blackImg.size
+	blackImg = blackImg.convert('RGBA')
+	loadedBlack = blackImg.load()
 	loadedWhite = whiteImg.load()
-	loadedBlack = blackImg.convert('RGBA').load()
 	for x in range(size[0]):
 		for y in range(size[1]):
 			blackPixel = loadedBlack[x, y]
@@ -275,18 +278,12 @@ def automateDis(model,
 		n += 1
 	for thread in threads:
 		thread.join() # Wait for threads to finish, if any
-	# Stitch images together
 	print 'Stitching images together...'
-	stitchPool = threadpool(numThreads=2, defaultTarget=stitch)
 	if teamColours:
-		finalREDImageName = itemName + ' RED 3D.jpg'
-		finalBLUImageName = itemName + ' BLU 3D.jpg'
-		stitchPool(outputFolder, 'RED', finalREDImageName, numberOfImages, verticalRotations)
-		stitchPool(outputFolder, 'BLU', finalBLUImageName, numberOfImages, verticalRotations)
+		stitch(outputFolder, None, itemName + 'RED 3D.jpg', numberOfImages, verticalRotations)
+		stitch(outputFolder, None, itemName + 'BLU 3D.jpg', numberOfImages, verticalRotations)
 	else:
-		finalImageName = itemName + ' 3D.jpg'
-		stitchPool(outputFolder, None, finalImageName, numberOfImages, verticalRotations)
-	stitchPool.shutdown()
+		stitch(outputFolder, None, itemName + ' 3D.jpg', numberOfImages, verticalRotations)
 	# Upload images to wiki
 	if teamColours:
 		uploadFile(outputFolder, itemName + ' RED 3D.jpg')
