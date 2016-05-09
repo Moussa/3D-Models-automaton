@@ -46,15 +46,15 @@ def uploadFile(outputFolder, title):
 		res = target.upload(file, ignorewarnings=ignorewarnings)
 		print res
 		if res['upload']['result'] == 'Warning':
-			print 'Failed for file: ', title
-			print res['upload']['message']
+			print 'Failed for file:', title
+			print res['upload']['warnings']
 		else:
 			print Page(wiki, title).edit(text=description)
 	else:
 		res = target.upload(file, comment=description)
 		if res['upload']['result'] == 'Warning':
 			print 'Failed for file: ', title
-			print res['upload']['message']
+			print res['upload']['warnings']
 
 def getBrightness(p):
 	return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
@@ -241,7 +241,7 @@ def automateDis(model,
 					redFiles = [open(f, 'rb').read() for f in REDVMTFiles]
 					# Overwrite the red VMT files with the blu VMT contents to change the weapon colour to BLU
 					for bluFileName, redFileName in zip(BLUVMTFiles, REDVMTFiles):
-						with open(redFileName, 'wb') as redFile and open(bluFileName, 'rb') as bluFile:
+						with open(redFileName, 'wb') as redFile, open(bluFileName, 'rb') as bluFile:
 							redFile.write(bluFile.read())
 					SendKeys(r'{F5}')
 					sleep(1.0)
@@ -274,10 +274,10 @@ def automateDis(model,
 		thread.join() # Wait for threads to finish, if any
 	print 'Stitching images together...'
 	if teamColours:
-		stitch(outputFolder, None, itemName + 'RED 3D.jpg', numberOfImages, verticalRotations)
-		stitch(outputFolder, None, itemName + 'BLU 3D.jpg', numberOfImages, verticalRotations)
+		stitch(outputFolder, itemName + 'RED 3D.jpg', numberOfImages, verticalRotations)
+		stitch(outputFolder, itemName + 'BLU 3D.jpg', numberOfImages, verticalRotations)
 	else:
-		stitch(outputFolder, None, itemName + ' 3D.jpg', numberOfImages, verticalRotations)
+		stitch(outputFolder, itemName + ' 3D.jpg', numberOfImages, verticalRotations)
 	# Upload images to wiki
 	if teamColours:
 		uploadFile(outputFolder, itemName + ' RED 3D.jpg')

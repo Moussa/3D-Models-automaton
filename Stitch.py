@@ -1,12 +1,10 @@
 import os, Image, ImageFile, numpy
+from threading import Thread
 try:
 	import psyco
 	psyco.full()
 except:
 	pass
-
-from threading import Thread
-# This pool should NOT use multiprocessing in order to avoid copying huge image objects around from process to process
 
 targetDimension = 280
 targetSize = 512 * 1024 # 512 KB
@@ -42,7 +40,7 @@ def cropTask(i, s, filename):
 	if size[1] - cropping[3] < minCrop[3]:
 		minCrop[3] = size[1] - cropping[3]
 
-def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
+def stitch(imagesDir, outpootFile, yRotNum, xRotNum=1):
 	outpootFile = imagesDir + os.sep + outpootFile
 	print 'Cropping frames...'
 	threads = []
