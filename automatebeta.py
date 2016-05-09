@@ -1,21 +1,21 @@
-from mouse import click # 300
-from os import sep, makedirs # Various, 186
-from subprocess import Popen, PIPE # 38, 41
-from math import sin, cos, pi # 29, 104, 125
-from imgpie import wrap # 179, 180
-from time import time, sleep # 59, 263, 481
-from win32api import GetKeyState
-from win32gui import EnumWindows, GetWindowText, SetForegroundWindow, ShowWindow # 44
 from hashlib import md5
 from HLMVModel import HLMVModelRegistryKey # 486
+from ImageGrab import grab # Various
+from imgpie import wrap # 179, 180
+from math import cos, pi, sin # 29, 104, 125
+from mouse import click # 300
+from os import makedirs, sep # Various, 186
+from subprocess import Popen, PIPE #
+from time import time, sleep # 59, 263, 481
 from Stitch import stitch # 416
 from SendKeys import SendKeys # Various
-from screenshot import screenshot
 from threadpool import threadpool
 from threading import Thread
 from wikitools import wiki
 from wikitools.wikifile import File
+from win32api import GetKeyState
 import win32con
+from win32gui import EnumWindows, GetWindowText, SetForegroundWindow, ShowWindow # 44
 try:
 	import psyco
 	psyco.full()
@@ -28,12 +28,12 @@ degreesToRadiansFactor = pi / 180.0
 outputImagesDir = r'output' # The directory where the output images will be saved.
 imgCropBoundaries = (1, 42, 1279, 515) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
 fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
-sleepFactor = 1.0 # Sleep time factor that affects how long the script waits for HLMV to load/models to load etc
+#sleepFactor = 1.0 # Sleep time factor that affects how long the script waits for HLMV to load/models to load etc
 wiki = wiki.Wiki('http://wiki.teamfortress.com/w/api.php')
 
-def uploadFile(title):
+def uploadFile(outputFolder, title):
 	hash = md5(title.replace(' ', '_')).hexdigest()
-	url = 'http://wiki.teamfortress.com/w/images/%s/%s/' % (hash[:1], hash[:2], title.replace(' ', '_'))
+	url = 'http://wiki.teamfortress.com/w/images/%s/%s/%s' % (hash[:1], hash[:2], title.replace(' ', '_'))
 	description = open('%s\\%s offsetmap.txt' % (outputFolder, title), 'rb').read()
 	description = description.replace('url = <nowiki></nowiki>','url = <nowiki>' + url + '</nowiki>')
 
@@ -155,6 +155,7 @@ def automateDis(model,
 			import sys
 			sys.exit(1)
 
+	# Load initial translation and rotation from regedit if not otherwise provided.
 	if initialTranslation is None:
 		initialTranslation = [model.returnTranslation()['x'], model.returnTranslation()['y'], model.returnTranslation()['z']]
 	if initialRotation is None:
@@ -213,11 +214,11 @@ def automateDis(model,
 
 				global threads
 				# Take whiteBG screenshot and crop
-				imgWhiteBG = screenshot().crop(imgCropBoundaries)
+				imgWhiteBG = grab().crop(imgCropBoundaries)
 				# Change BG colour to black
 				SendKeys(r'^b')
 				# Take blackBG screenshot and crop
-				imgBlackBG = screenshot().crop(imgCropBoundaries)
+				imgBlackBG = grab().crop(imgCropBoundaries)
 				if teamColours:
 					name = '%s\%d_%d_RED.png' % (outputFolder, n, xrotation / -15)
 				else:
@@ -244,11 +245,11 @@ def automateDis(model,
 					SendKeys(r'{F5}')
 					sleep(1.0)
 					# Take whiteBG screenshot and crop
-					imgWhiteBG = screenshot().crop(imgCropBoundaries)
+					imgWhiteBG = grab().crop(imgCropBoundaries)
 					# Change BG colour to black
 					SendKeys(r'^b')
 					# Take blackBG screenshot and crop
-					imgBlackBG = screenshot().crop(imgCropBoundaries)
+					imgBlackBG = grab().crop(imgCropBoundaries)
 					# Return VMT back to RED
 					for file, fileName in zip(bluFiles, redFileNames):
 						with open(fileName, 'wb') as f:
@@ -285,10 +286,10 @@ def automateDis(model,
 	stitchPool.shutdown()
 	# Upload images to wiki
 	if teamColours:
-		uploadFile(itemName + ' RED 3D.jpg')
-		uploadFile(itemName + ' BLU 3D.jpg')
+		uploadFile(outputFolder, itemName + ' RED 3D.jpg')
+		uploadFile(outputFolder, itemName + ' BLU 3D.jpg')
 	else:
-		uploadFile(itemName + ' 3D.jpg')
+		uploadFile(outputFolder, itemName + ' 3D.jpg')
 	# All done yay
 	print '\nAll done'
 
