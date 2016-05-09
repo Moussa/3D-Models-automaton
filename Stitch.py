@@ -12,7 +12,7 @@ from autocrop import autocrop
 import threadpool
 
 def cropTask(i, s, filename):
-	print 'Processing:', filename
+	# print 'Processing:', filename
 	img = Image.open(filename).convert('RGBA')
 	newI, cropping = autocrop(img)
 	return i, s, img.size[:], newI, cropping
@@ -33,10 +33,7 @@ def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 	cropPool = threadpool.threadpool(numThreads=6, defaultTarget=cropTask, multiprocess=False)
 	for i in xrange(yRotNum):
 		for s in xrange(-xRotNum, xRotNum + 1):
-			if colour is None:
-				filename = imagesDir + os.sep + str(i) + '_' + str(s) + '.png'
-			else:
-				filename = imagesDir + os.sep + str(i) + '_' + str(s) + '_' + colour + '.png'
+			filename = imagesDir + os.sep + str(i) + '_' + str(s) + '.png'
 			cropPool(i, s, filename)
 	results = cropPool.shutdown()
 	orderedResults = {}
@@ -68,7 +65,7 @@ def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 	print 'Max frame size, including cropped area:', maxFrameSize
 	targetRatio = float(targetDimension) / float(max(maxFrameSize))
 	print 'Target scaling ratio:', targetRatio
-	rescaledMaxSize = (int(round(float(maxFrameSize[0]) * targetRatio)), int(round(float(maxFrameSize[1]) * targetRatio)))
+	rescaledMaxSize = (int(maxFrameSize[0] * targetRatio), int(maxFrameSize[1] * targetRatio))
 	print 'Computing rescaled sizes, and scaling...'
 	finalSize = (0, 0)
 	resized = []
@@ -89,9 +86,7 @@ def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 	currentOffsetIntervaled = 0
 	for f in resized:
 		fullImg.paste(f, (currentOffsetIntervaled, normalizedTopCrops[f]), f)
-		offsetMap.append(str(currentOffset))
-		offsetMap.append(str(f.size[1]))
-		offsetMap.append(str(normalizedLeftCrops[f]))
+		offsetMap += [currentOffset, f.size[1], normalizedLeftCrops[f]]
 		currentOffset += f.size[0]
 		currentOffsetIntervaled += f.size[0] + 1
 	# Saving
@@ -105,13 +100,13 @@ def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 		fullImg.save(outpootFile, 'JPEG', quality=quality, optimize=True, progressive=True)
 	print 'Saved to', outpootFile, 'with quality', quality
 	h = open(outpootFile + ' offsetmap.txt', 'wb')
-	h.write("""{{#switch: {{{1|}}}
+	h.write('''{{#switch: {{{1|}}})
   | url = <nowiki></nowiki>
-  | map = \n""" + str(currentOffset) + ',' + str(rescaledMaxSize[0]) + ',' + str(finalSize[1]) + ',' + str(xRotNum * 2 + 1) + ',' + ','.join(offsetMap) + """\n  | width = """ + str(targetDimension) + """
-  | height = """ + str(targetDimension) + """
+  | map = \n%d,%d,%d,%d,%s
+  | height = %d
   | startframe = 16
 }}<noinclude>{{3D viewer}}[[Category:3D model images]]
-{{Externally linked}}""")
+{{Externally linked}}''' % (currentOffset, rescaledMaxSize[0], finalSize[1], xRotNum*2 + 1, ','.join([str(o) for o in offsetMap]), targetDimension))
 	h.close()
 	print 'Offset map saved to ' + outpootFile + ' offsetmap.txt'
 
