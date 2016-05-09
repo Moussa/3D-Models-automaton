@@ -105,7 +105,7 @@ def stitch(imagesDir, colour, outpootFile, yRotNum, xRotNum=1):
 		fullImg.save(outpootFile, 'JPEG', quality=quality, optimize=True, progressive=True)
 	print 'Saved to', outpootFile, 'with quality', quality
 	h = open(outpootFile + ' offsetmap.txt', 'wb')
-	h.write('''{{#switch: {{{1|}}})
+	h.write('''{{#switch: {{{1|}}}
   | url = <nowiki></nowiki>
   | map = \n%d,%d,%d,%d,%s
   | height = %d

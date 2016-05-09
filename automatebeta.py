@@ -41,7 +41,7 @@ def uploadFile(outputFolder, title):
 	target = File(wiki, title)
 	if target.exists:
 		answer = raw_input('File already exists, ovewrite? y\\n? ')
-		ignorewarnings = answer.lower() in ['yes', 'y']:
+		ignorewarnings = answer.lower() in ['yes', 'y']
 		res = target.upload(file, ignorewarnings=ignorewarnings)
 		if res['upload']['result'] == 'Warning':
 			print 'Failed for file: ', title
@@ -59,15 +59,8 @@ def getBrightness(p):
 
 def blend(blackImg, whiteImg, name):
 	size = blackImg.size
-	blackImg = blackImg.convert('RGBA')
-	loadedBlack = blackImg.load()
 	loadedWhite = whiteImg.load()
-	print loadedBlack[0, 0]
-	# User got it backwards, the (current) cropping method won't work.
-	if loadedBlack[0, 0] == (0, 0, 0, 255):
-		temp = loadedWhite
-		loadedWhite = loadedBlack
-		loadedBlack = temp
+	loadedBlack = blackImg.convert('RGBA').load()
 	for x in range(size[0]):
 		for y in range(size[1]):
 			blackPixel = loadedBlack[x, y]
