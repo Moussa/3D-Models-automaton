@@ -44,7 +44,7 @@ class imageProcessor:
 					(blackPixel[0] + whitePixel[0]) / 2,
 					(blackPixel[1] + whitePixel[1]) / 2,
 					(blackPixel[2] + whitePixel[2]) / 2,
-					int(255.0 - 255.0 * (self.getBrightness(whitePixel) - self.getBrightness(blackPixel)))
+					255 - int(self.getBrightness(whitePixel) - self.getBrightness(blackPixel))
 				)
 		if name:
 			blackImg.save(name, 'PNG')
@@ -80,7 +80,7 @@ class imageProcessor:
 	def cropImages(self, imagesDir, outpootFile, yRotNum, xRotNum=1):
 		threads = []
 		for i in range(yRotNum):
-			for s in range(-xRotNum, xRotNum + 1):
+			for s in range(xRotNum, -xRotNum-1, -1):
 				if self.suffix:
 					img = Image.open('%s\%d_%d_%s.png' % (imagesDir, i, s, self.suffix)).convert('RGBA')
 				else:

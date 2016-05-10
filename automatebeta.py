@@ -44,12 +44,11 @@ def uploadFile(outputFolder, title):
 		answer = raw_input('File already exists, ovewrite? y\\n? ')
 		ignorewarnings = answer.lower() in ['yes', 'y']
 		res = target.upload(file, ignorewarnings=ignorewarnings)
-		print res
 		if res['upload']['result'] == 'Warning':
 			print 'Failed for file:', title
 			print res['upload']['warnings']
 		else:
-			print Page(wiki, 'File:'+title).edit(text=description)
+			Page(wiki, 'File:'+title).edit(text=description)
 	else:
 		res = target.upload(file, comment=description)
 		if res['upload']['result'] == 'Warning':
@@ -166,7 +165,7 @@ def automateDis(model,
 	model.setBGColour(255, 255, 255, 255)
 	for yrotation in range((-180 + (360/numberOfImages * n)), 180, 360/numberOfImages):
 		print 'n =', n
-		for xrotation in range(-15, 30, 15):
+		for xrotation in range(15, -30, -15):
 			if (verticalRotations == 0 and xrotation == 0) or verticalRotations == 1:
 				# Set rotation
 				sleep(0.5)
