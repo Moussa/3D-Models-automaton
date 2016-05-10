@@ -5,7 +5,7 @@ from math import cos, pi, sin # 25, 70, 91
 from os import makedirs, sep # Various
 from subprocess import Popen, PIPE # 166, 193, 265
 from time import time, sleep # Various, 296, 316
-from Stitch import stitch # 275
+from Stitch import imageProcessor # Various
 from SendKeys import SendKeys # Various
 from threading import Thread # 226, 257
 from wikitools import wiki # 30
@@ -49,32 +49,12 @@ def uploadFile(outputFolder, title):
 			print 'Failed for file:', title
 			print res['upload']['warnings']
 		else:
-			print Page(wiki, title).edit(text=description)
+			print Page(wiki, 'File:'+title).edit(text=description)
 	else:
 		res = target.upload(file, comment=description)
 		if res['upload']['result'] == 'Warning':
 			print 'Failed for file: ', title
 			print res['upload']['warnings']
-
-def getBrightness(p):
-	return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
-
-def blend(blackImg, whiteImg, name):
-	size = blackImg.size
-	blackImg = blackImg.convert('RGBA')
-	loadedBlack = blackImg.load()
-	loadedWhite = whiteImg.load()
-	for x in range(size[0]):
-		for y in range(size[1]):
-			blackPixel = loadedBlack[x, y]
-			whitePixel = loadedWhite[x, y]
-			loadedBlack[x, y] = (
-				(blackPixel[0] + whitePixel[0]) / 2,
-				(blackPixel[1] + whitePixel[1]) / 2,
-				(blackPixel[2] + whitePixel[2]) / 2,
-				int(255.0 - 255.0 * (getBrightness(whitePixel) - getBrightness(blackPixel)))
-			)
-	blackImg.save(name, 'PNG')
 
 def rotateAboutNewCentre(x, y, z, rotOffset, yAngle, xAngle):
 	""" Method to position a model in HLMV with a new center of rotation.
@@ -174,6 +154,13 @@ def automateDis(model,
 	print 'initialTranslation =', initialTranslation
 	print 'initialRotation =', initialRotation
 	
+	# Create the image processors, used for blending, cropping, and stitching
+	if teamColours:
+		ipRed = imageProcessor(suffix='RED')
+		ipBlu = imageProcessor(suffix='BLU')
+	else:
+		ip = imageProcessor()
+		
 	model.setTranslation(x = initialTranslation[0], y = initialTranslation[1], z = initialTranslation[2])
 	model.setNormalMapping(True)
 	model.setBGColour(255, 255, 255, 255)
@@ -224,19 +211,15 @@ def automateDis(model,
 				SendKeys(r'^b')
 				# Take blackBG screenshot and crop
 				imgBlackBG = grab().crop(imgCropBoundaries)
-				if teamColours:
-					name = '%s\%d_%d_RED.png' % (outputFolder, n, xrotation / -15)
-				else:
-					name = '%s\%d_%d.png' % (outputFolder, n, xrotation / -15)
 				# Remove background from images
-				thread = Thread(target=blend, kwargs={
-					'blackImg': imgBlackBG,
-					'whiteImg': imgWhiteBG,
-					'name': name
-				})
-				threads.append(thread)
-				thread.start()
 				if teamColours:
+					thread = Thread(target=ipRed.blend, kwargs={
+						'blackImg': imgBlackBG,
+						'whiteImg': imgWhiteBG,
+						'name': '%s\%d_%d_RED.png' % (outputFolder, n, xrotation / -15)
+					})
+					threads.append(thread)
+					thread.start()
 					# Save red VMT files
 					redFiles = [open(f, 'rb').read() for f in REDVMTFiles]
 					# Overwrite the red VMT files with the blu VMT contents to change the weapon colour to BLU
@@ -256,10 +239,18 @@ def automateDis(model,
 						with open(redFileName, 'wb') as redFile:
 							redFile.write(redFileContents)
 					# Remove background from images
-					thread = Thread(target=blend, kwargs={
+					thread = Thread(target=ipBlu.blend, kwargs={
 						'blackImg': imgBlackBG,
 						'whiteImg': imgWhiteBG,
 						'name': '%s\%d_%d_BLU.png' % (outputFolder, n, xrotation / -15)
+					})
+					threads.append(thread)
+					thread.start()
+				else:
+					thread = Thread(target=ip.blend, kwargs={
+						'blackImg': imgBlackBG,
+						'whiteImg': imgWhiteBG,
+						'name': '%s\%d_%d.png' % (outputFolder, n, xrotation / -15)
 					})
 					threads.append(thread)
 					thread.start()
@@ -268,16 +259,17 @@ def automateDis(model,
 				# Check for kill switch
 				if GetKeyState(win32con.VK_CAPITAL) in [1, -127]:
 					print 'Successfully terminated'
+					import sys
 					sys.exit(0)
 		n += 1
 	for thread in threads:
 		thread.join() # Wait for threads to finish, if any
 	print 'Stitching images together...'
 	if teamColours:
-		stitch(outputFolder, itemName + 'RED 3D.jpg', numberOfImages, verticalRotations)
-		stitch(outputFolder, itemName + 'BLU 3D.jpg', numberOfImages, verticalRotations)
+		ipRed.stitch(outputFolder + sep + itemName + ' RED 3D.jpg', n, verticalRotations)
+		ipBlu.stitch(outputFolder + sep + itemName + ' BLU 3D.jpg', n, verticalRotations)
 	else:
-		stitch(outputFolder, itemName + ' 3D.jpg', numberOfImages, verticalRotations)
+		ip.stitch(outputFolder + sep + itemName + ' 3D.jpg', n, verticalRotations)
 	# Upload images to wiki
 	if teamColours:
 		uploadFile(outputFolder, itemName + ' RED 3D.jpg')
