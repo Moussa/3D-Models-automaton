@@ -5,7 +5,7 @@ from math import cos, pi, sin # 25, 70, 91
 from os import makedirs, sep # Various
 from subprocess import Popen, PIPE # 166, 193, 265
 from time import time, sleep # Various, 296, 316
-from Stitch import imageProcessor # Various
+from imageprocessor import imageProcessor # Various
 from SendKeys import SendKeys # Various
 from threading import Thread # 226, 257
 from wikitools import wiki # 30
@@ -249,7 +249,7 @@ def automateDis(model,
 					SendKeys(r'^b')
 					imgBlackBG = grab().crop(imgCropBoundaries)
 					SendKeys(r'^b')
-					thread = Thread(target=blend, kwargs={
+					thread = Thread(target=ip.blend, kwargs={
 						'blackImg': imgBlackBG,
 						'whiteImg': imgWhiteBG,
 						'name': '%s\%d_%d.png' % (outputFolder, n, xrotation / -15)
@@ -288,19 +288,19 @@ if __name__ == '__main__':
 	# Poot values here
 	model = HLMVModelRegistryKey('models.weapons.c_models.urinejar.mdl')
 	automateDis(model = model,
-				numberOfImages = 6,
+				numberOfImages = 24,
 				n = 0,
-				rotationOffset = None,
+				rotationOffset = 8,
 				verticalOffset = None,
-				verticalRotations = 0,
+				verticalRotations = 1,
 				screenshotPause = False,
-#				initialRotation = (0.000000, 0.000000, 0.000000),
-#				initialTranslation = (30.055614, 0.000000, 1.605678),
+				initialRotation = (0.000000, 0.000000, 0.000000),
+				initialTranslation = (21.055614, 0.000000, 1.605677),
 				teamColours = False,
 				pathToHlmv = r'F:\Steam\steamapps\common\Team Fortress 2\bin',
-				itemName = 'User Darkid Test',
-				REDVMTFiles = [],#r'F:\Steam\steamapps\common\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap.vmt'],
-				BLUVMTFiles = [],#r'F:\Steam\steamapps\common\team fortress 2\tf\materials\models\player\items\heavy\heavy_stocking_cap_blue.vmt'],
+				itemName = 'Jarate',
+				#REDVMTFiles = [r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler.vmt', r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_laser.vmt'],
+				#BLUVMTFiles = [r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_blue.vmt', r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_laser_blue.vmt'],
 				)
 
 	print 'completed in', int(time() - starttime), 'seconds'
