@@ -4,8 +4,13 @@
 
 Requirements
 =============
-*Python 2.6_
-*SendKeys_
+* Python
+* SendKeys
+* VC++ Compiler
+* PIL
+* Wikitools
+* NumPy
+* pywin32
+* MSVC++
 
-.. _Python 2.6: http://www.python.org/getit/releases/2.6.6/
-.. _SendKeys: http://www.rutherfurd.net/python/sendkeys/
+See https://wiki.teamfortress.com/wiki/Team_Fortress_Wiki:3D_Models for a more up-to-date list.
