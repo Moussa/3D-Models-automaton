@@ -204,14 +204,12 @@ def automateDis(model,
 						pass
 
 				global threads
-				# Take whiteBG screenshot and crop
-				imgWhiteBG = grab().crop(imgCropBoundaries)
-				# Change BG colour to black
-				SendKeys(r'^b')
-				# Take blackBG screenshot and crop
-				imgBlackBG = grab().crop(imgCropBoundaries)
-				# Remove background from images
 				if teamColours:
+					# Take two (red) images, on one black and one on white, blend them together to find transparency
+					imgWhiteBG = grab().crop(imgCropBoundaries)
+					SendKeys(r'^b')
+					imgBlackBG = grab().crop(imgCropBoundaries)
+					SendKeys(r'^b')
 					thread = Thread(target=ipRed.blend, kwargs={
 						'blackImg': imgBlackBG,
 						'whiteImg': imgWhiteBG,
@@ -219,25 +217,20 @@ def automateDis(model,
 					})
 					threads.append(thread)
 					thread.start()
-					# Save red VMT files
+					
+					# Swap the red and blue .vmts to change the weapon's colour
 					redFiles = [open(f, 'rb').read() for f in REDVMTFiles]
-					# Overwrite the red VMT files with the blu VMT contents to change the weapon colour to BLU
 					for bluFileName, redFileName in zip(BLUVMTFiles, REDVMTFiles):
 						with open(redFileName, 'wb') as redFile, open(bluFileName, 'rb') as bluFile:
 							redFile.write(bluFile.read())
 					SendKeys(r'{F5}')
 					sleep(1.0)
-					# Take whiteBG screenshot and crop
+
+					# Take two (blue) images and blend them together
 					imgWhiteBG = grab().crop(imgCropBoundaries)
-					# Change BG colour to black
 					SendKeys(r'^b')
-					# Take blackBG screenshot and crop
 					imgBlackBG = grab().crop(imgCropBoundaries)
-					# Replace the red VMT files with our saved copy to change the weapon colour back to RED
-					for redFileName, redFileContents in zip(REDVMTFILES, redFiles):
-						with open(redFileName, 'wb') as redFile:
-							redFile.write(redFileContents)
-					# Remove background from images
+					SendKeys(r'^b')
 					thread = Thread(target=ipBlu.blend, kwargs={
 						'blackImg': imgBlackBG,
 						'whiteImg': imgWhiteBG,
@@ -245,8 +238,18 @@ def automateDis(model,
 					})
 					threads.append(thread)
 					thread.start()
+
+					# Swap the item back to red
+					for redFileName, redFileContents in zip(REDVMTFiles, redFiles):
+						with open(redFileName, 'wb') as redFile:
+							redFile.write(redFileContents)
 				else:
-					thread = Thread(target=ip.blend, kwargs={
+					# Take two images, on one black and one on white, blend them together to find transparency
+					imgWhiteBG = grab().crop(imgCropBoundaries)
+					SendKeys(r'^b')
+					imgBlackBG = grab().crop(imgCropBoundaries)
+					SendKeys(r'^b')
+					thread = Thread(target=blend, kwargs={
 						'blackImg': imgBlackBG,
 						'whiteImg': imgWhiteBG,
 						'name': '%s\%d_%d.png' % (outputFolder, n, xrotation / -15)
