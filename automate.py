@@ -25,7 +25,7 @@ threads = [] # Used to track the threads used for blending
 degreesToRadiansFactor = pi / 180.0
 wiki = wiki.Wiki('http://wiki.teamfortress.com/w/api.php')
 outputImagesDir = r'output' # The directory where the output images will be saved.
-imgCropBoundaries = (1, 42, 1279, 515) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
+imgCropBoundaries = (1, 42, 1279, 550) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
 fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
 #sleepFactor = 1.0 # Sleep time factor that affects how long the script waits for HLMV to load/models to load etc
 
@@ -48,7 +48,7 @@ def uploadFile(outputFolder, title):
 			print 'Failed for file:', title
 			print res['upload']['warnings']
 		else:
-			Page(wiki, 'File:'+title).edit(text=description)
+			Page(wiki, 'File:'+title).edit(text=description, redirect=False)
 	else:
 		res = target.upload(file, comment=description)
 		if res['upload']['result'] == 'Warning':
