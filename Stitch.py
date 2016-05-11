@@ -135,12 +135,12 @@ class imageProcessor:
 		print 'Saved to', outpootFile, 'with quality', quality
 		h = open(outpootFile + ' offsetmap.txt', 'wb')
 		h.write('''{{#switch: {{{1|}}}
-	  | url = <nowiki></nowiki>
-	  | map = \n%d,%d,%d,%d,%s
-	  | height = %d
-	  | startframe = 16
-	}}<noinclude>{{3D viewer}}[[Category:3D model images]]
-	{{Externally linked}}''' % (currentOffset, int(self.maxFrameSize[0]*targetRatio), self.finalSize[1], xRotNum*2 + 1, ','.join([str(o) for o in offsetMap]), self.targetDimension))
+  | url = <nowiki></nowiki>
+  | map = \n%d,%d,%d,%d,%s
+  | height = %d
+  | startframe = 16
+}}<noinclude>{{3D viewer}}[[Category:3D model images]]
+{{Externally linked}}''' % (currentOffset, int(self.maxFrameSize[0]*targetRatio), self.finalSize[1], xRotNum*2 + 1, ','.join([str(o) for o in offsetMap]), self.targetDimension))
 		h.close()
 		print 'Offset map saved to ' + outpootFile + ' offsetmap.txt'
 		
