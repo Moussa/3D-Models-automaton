@@ -26,7 +26,7 @@ outputImagesDir = r'output' # The directory where the output images will be save
 # The cropping boundaries, as a pixel
 # distance from the top left corner, for the images as a tuple:
 # (left boundary, top boundary, right boundary, bottom boundary).
-imgCropBoundaries = (1, 42, 1279, 550)
+imgCropBoundaries = (1, 42, 1279, 510)
 fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
 #sleepFactor = 1.0 # Multiplicitive factor for script wait times
 
