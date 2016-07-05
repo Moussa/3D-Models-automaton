@@ -1,7 +1,6 @@
 from hashlib import md5 # 34
 from HLMVModel import HLMVModelRegistryKey # 298
-from ImageGrab import grab # Various
-from math import cos, pi, sin # 25, 70, 91
+from PIL.ImageGrab import grab # Various
 from os import makedirs, sep # Various
 from subprocess import Popen, PIPE # 166, 193, 265
 from time import time, sleep # Various, 296, 316
@@ -22,7 +21,6 @@ except:
 
 global threads
 threads = [] # Used to track the threads used for blending
-degreesToRadiansFactor = pi / 180.0
 wiki = wiki.Wiki('http://wiki.teamfortress.com/w/api.php')
 outputImagesDir = r'output' # The directory where the output images will be saved.
 # The cropping boundaries, as a pixel
@@ -59,7 +57,7 @@ def uploadFile(outputFolder, title):
             print res['upload']['warnings']
 
 def automateDis(
-    model,
+    key,
     numberOfImages=24,
     n=0,
     rotationOffset=None,
@@ -77,25 +75,24 @@ def automateDis(
     Method to automize process of taking images for 3D model views. 
     
     Parameters:
-        model -> (REQUIRED) An HLMVModelRegistryKey object for the model.
+        key -> (REQUIRED) The registry key for the model
         numberOfImages -> Number of images to take per one full rotation.
         n -> Offset the rotation from this image number.
-        rotationOffset -> Offset the center of rotation (HLMV units)
-        verticalOffset -> The vertical offset for models that are centered in both other planes but not vertically. Optional, default is none.
+        rotationOffset -> Offset the center of rotation horizontally
+        verticalOffset -> Offset the center of rotation vertically
         verticalRotations -> Set to 0 to disable vertical rotations.
         screenshotPause -> Pause on each screenshot. NUMLOCK will continue.
         pathToHlmv -> Path to hlmv.exe. Usually in common\Team Fortress 2\bin
-        itemName -> The name of the item, as will be saved to disk
+        itemName -> The name of the item, as will be saved to disk and uploaded
         REDVMTFiles -> A list of RED vmt file locations.
         BLUVMTFiles -> A list of BLU vmt file locations.
     """
 
-    folder = raw_input('Folder name for created images: ')
-    outputFolder = outputImagesDir + sep + folder
+    outputFolder = outputImagesDir + sep + itemName
     try:
         makedirs(outputFolder)
     except WindowsError:
-        answer = raw_input('Folder already exists, overwrite files? y\\n? ')
+        answer = raw_input('Folder "%s" already exists, overwrite files? (y\\n) ' % itemName)
         if answer.lower() in ['no', 'n']:
             import sys
             sys.exit(1)
@@ -104,6 +101,8 @@ def automateDis(
     sleep(3)
 
     # Close HLMV, in case it's already open. Suppress all responses.
+    model = HLMVModelRegistryKey(key, rotation=initialRotation, translation=initialTranslation)
+
     Popen(['taskkill', '/f', '/t', '/im', 'hlmv.exe'], stderr=PIPE, stdout=PIPE)
     sleep(2.0)
     print 'initialTranslation =', initialTranslation
@@ -122,7 +121,8 @@ def automateDis(
     else:
         ip = imageProcessor()
 
-    for yrotation in range((-180 + (360/numberOfImages * n)), 180, 360/numberOfImages):
+    for y in range(n, numberOfImages):
+        yrotation = (360/numberOfImages)*y
         print 'n =', n
         for xrotation in range(15, -30, -15):
             if (verticalRotations == 0 and xrotation == 0) or verticalRotations == 1:
@@ -230,21 +230,22 @@ def automateDis(
     print '\nAll done'
 
 if __name__ == '__main__':
-    wiki.login('darkid')
+    #wiki.login('darkid')
     starttime = time()
     
     # Poot values here
-    model = HLMVModelRegistryKey('models.weapons.c_models.urinejar.mdl')
-    automateDis(model = model,
+    automateDis(key = 'models.workshop.weapons.c_models.c_atom_launcher.c_atom_launcher.mdl',
                 numberOfImages = 24,
                 n = 0,
-                rotationOffset = 8,
+                rotationOffset = -6,
                 verticalOffset = None,
-                verticalRotations = 1,
+                initialRotation = (0.000000, 0.000000, 0.000000),
+                initialTranslation = (79.149429, 0.000000, 1.789900),
+                verticalRotations = 0,
                 screenshotPause = False,
                 teamColours = False,
                 pathToHlmv = r'F:\Steam\steamapps\common\Team Fortress 2\bin',
-                itemName = 'Jarate',
+                itemName = 'User Darkid Test',
                 #REDVMTFiles = [r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler.vmt', r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_laser.vmt'],
                 #BLUVMTFiles = [r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_blue.vmt', r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_laser_blue.vmt'],
                 )

@@ -1,4 +1,7 @@
-import os, Image, ImageFile, numpy
+import os
+from PIL import Image
+from PIL import ImageFile
+import numpy
 from threading import Thread, Lock
 try:
 	import psyco
@@ -51,7 +54,7 @@ class imageProcessor:
 		self.cropTask(self.getNumber(), blackImg)
 
 	# Finds the closest-cropped lines that are all white.
-	def cropTask(self, n,  img):
+	def cropTask(self, n, img):
 		alpha = numpy.array(img, dtype=numpy.dtype('i'))[:,:,3]
 		horizontal = alpha.any(axis=0).nonzero()[0]
 		vertical = alpha.any(axis=1).nonzero()[0]
