@@ -72,19 +72,15 @@ class HLMVModelRegistryKey(object):
             self.z_ang
         )
 
-        print self.y_pos
-        print sin(y)*self.rot_offset
-        
+        # Python's math module only uses radians
+        x = radians(x)
+        y = radians(y)
+
         new_translation = (
             self.x_pos + cos(y)*self.rot_offset + sin(x)*sin(y)*self.vert_offset,
             self.y_pos + sin(y)*self.rot_offset + sin(x)*sin(y)*self.vert_offset,
             self.z_pos - sin(x)*self.rot_offset
         )
-        # Python's math module only uses radians
-        x = radians(x)
-        y = radians(y)
-        
-        print new_translation
 
         # Modify the angle from its initial value
         _winreg.SetValueEx(self.itemkey, # Model key
