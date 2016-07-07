@@ -4,13 +4,17 @@
 
 Requirements
 =============
-* Python
-* SendKeys
-* VC++ Compiler
-* PIL
-* Wikitools
-* NumPy
-* pywin32
-* MSVC++
+* Windows
+* TF2
+* HLMV (included as a part of TF2)
+* Python 2.6+
+* pip install pillow
+* pip install SendKeys
+* pip install wikitools
+* pip install pypiwin32
+* pip install numpy
 
-See https://wiki.teamfortress.com/wiki/Team_Fortress_Wiki:3D_Models for a more up-to-date list.
+If you want to upload automatically, you need
+* pip install poster
+
+If you have trouble with pip, install the Microsoft Visual C++ compiler.
