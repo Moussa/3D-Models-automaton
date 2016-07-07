@@ -1,22 +1,30 @@
-from hashlib import md5 # 34
-from HLMVModel import HLMVModelRegistryKey # 298
-from PIL.ImageGrab import grab # Various
-from os import makedirs, sep # Various
-from subprocess import Popen, PIPE # 166, 193, 265
-from time import time, sleep # Various, 296, 316
-from imageprocessor import imageProcessor # Various
-from SendKeys import SendKeys # Various
-from threading import Thread # 226, 257
-from wikitools import wiki # 30
-from wikitools.wikifile import File # 38
-from wikitools.page import Page # 38
+"""
+The base automation file. Deals with opening HLMV, and the interaction between
+the model (HLMVModel.py) and the image processing (imageprocessor.py)
+"""
+
+from hashlib import md5
+from os import makedirs, sep
+from subprocess import Popen, PIPE
+from time import time, sleep
+from threading import Thread
+
+from PIL.ImageGrab import grab
+from SendKeys import SendKeys
+from wikitools import wiki
+from wikitools.wikifile import File
+from wikitools.page import Page
 from win32api import GetKeyState, mouse_event, SetCursorPos
 import win32con
-from win32gui import EnumWindows, GetWindowText, SetForegroundWindow, ShowWindow # 195-199
+from win32gui import EnumWindows, GetWindowText, SetForegroundWindow, ShowWindow
+
+from imageprocessor import imageProcessor
+from HLMVModel import HLMVModelRegistryKey
+
 try:
     import psyco
     psyco.full()
-except:
+except ImportError:
     pass
 
 global threads
@@ -31,6 +39,9 @@ fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in 
 #sleepFactor = 1.0 # Multiplicitive factor for script wait times
 
 def uploadFile(outputFolder, title):
+    """
+    Uploads the files in outputFolder to the wiki as title
+    """
     if not wiki.isLoggedIn():
         return
     hash = md5(title.replace(' ', '_')).hexdigest()
@@ -57,23 +68,23 @@ def uploadFile(outputFolder, title):
             print res['upload']['warnings']
 
 def automateDis(
-    key,
-    numberOfImages=24,
-    n=0,
-    rotationOffset=None,
-    initialRotation=None,
-    initialTranslation=None,
-    verticalOffset=None,
-    verticalRotations=1,
-    screenshotPause=False,
-    teamColours=False,
-    pathToHlmv='',
-    itemName='',
-    REDVMTFiles=None,
-    BLUVMTFiles=None):
+        key,
+        numberOfImages=24,
+        n=0,
+        rotationOffset=None,
+        initialRotation=None,
+        initialTranslation=None,
+        verticalOffset=None,
+        verticalRotations=1,
+        screenshotPause=False,
+        teamColours=False,
+        pathToHlmv='',
+        itemName='',
+        REDVMTFiles=None,
+        BLUVMTFiles=None):
     """
-    Method to automize process of taking images for 3D model views. 
-    
+    Method to automize process of taking images for 3D model views.
+
     Parameters:
         key -> (REQUIRED) The registry key for the model
         numberOfImages -> Number of images to take per one full rotation.
@@ -82,7 +93,7 @@ def automateDis(
         verticalOffset -> Offset the center of rotation vertically
         verticalRotations -> Set to 0 to disable vertical rotations.
         screenshotPause -> Pause on each screenshot. NUMLOCK will continue.
-        pathToHlmv -> Path to hlmv.exe. Usually in common\Team Fortress 2\bin
+        pathToHlmv -> Path to hlmv.exe. Usually in common\\Team Fortress 2\\bin
         itemName -> The name of the item, as will be saved to disk and uploaded
         REDVMTFiles -> A list of RED vmt file locations.
         BLUVMTFiles -> A list of BLU vmt file locations.
@@ -107,7 +118,7 @@ def automateDis(
     sleep(2.0)
     print 'initialTranslation =', initialTranslation
     print 'initialRotation =', initialRotation
-    
+
     # Adjust model rotation as needed
     if rotationOffset:
         model.rot_offset = rotationOffset
@@ -133,14 +144,14 @@ def automateDis(
                 Popen([pathToHlmv + sep + 'hlmv.exe', '-game', pathToHlmv[:-4]+'\\tf\\'])
                 sleep(2)
                 # Focus and maximise HLMV
-                def enum_callback(hwnd, results):
+                def enum_callback(hwnd, _):
                     if GetWindowText(hwnd)[:22] == 'Half-Life Model Viewer':
                         SetForegroundWindow(hwnd)
                         ShowWindow(hwnd, win32con.SW_MAXIMIZE)
                 EnumWindows(enum_callback, [])
                 # Open most recent model
                 x, y = fileButtonCoordindates
-                SetCursorPos((x,y))
+                SetCursorPos((x, y))
                 mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, x, y, 0, 0)
                 mouse_event(win32con.MOUSEEVENTF_LEFTUP, x, y, 0, 0)
                 SendKeys(r'{UP 2}{RIGHT}{ENTER}')
@@ -153,7 +164,8 @@ def automateDis(
 
                 global threads
                 if teamColours:
-                    # Take two (red) images, on one black and one on white, blend them together to find transparency
+                    # Take two (red) images, on one black and one on white,
+                    # and blends them together to find transparency
                     imgWhiteBG = grab().crop(imgCropBoundaries)
                     SendKeys(r'^b')
                     imgBlackBG = grab().crop(imgCropBoundaries)
@@ -161,11 +173,11 @@ def automateDis(
                     thread = Thread(target=ipRed.blend, kwargs={
                         'blackImg': imgBlackBG,
                         'whiteImg': imgWhiteBG,
-                        'name': '%s\%d_%d_RED.png' % (outputFolder, n, xrotation / -15)
+                        'name': '%s\\%d_%d_RED.png' % (outputFolder, n, xrotation / -15)
                     })
                     threads.append(thread)
                     thread.start()
-                    
+
                     # Swap the red and blue .vmts to change the weapon's colour
                     redFiles = [open(f, 'rb').read() for f in REDVMTFiles]
                     for bluFileName, redFileName in zip(BLUVMTFiles, REDVMTFiles):
@@ -182,7 +194,7 @@ def automateDis(
                     thread = Thread(target=ipBlu.blend, kwargs={
                         'blackImg': imgBlackBG,
                         'whiteImg': imgWhiteBG,
-                        'name': '%s\%d_%d_BLU.png' % (outputFolder, n, xrotation / -15)
+                        'name': '%s\\%d_%d_BLU.png' % (outputFolder, n, xrotation / -15)
                     })
                     threads.append(thread)
                     thread.start()
@@ -200,12 +212,12 @@ def automateDis(
                     thread = Thread(target=ip.blend, kwargs={
                         'blackImg': imgBlackBG,
                         'whiteImg': imgWhiteBG,
-                        'name': '%s\%d_%d.png' % (outputFolder, n, xrotation / -15)
+                        'name': '%s\\%d_%d.png' % (outputFolder, n, xrotation / -15)
                     })
                     threads.append(thread)
                     thread.start()
                 # Close HLMV, supress success message
-                Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE)
+                Popen(['taskkill', '/f', '/t', '/im', 'hlmv.exe'], stdout=PIPE)
                 # Check for kill switch
                 if GetKeyState(win32con.VK_CAPITAL) in [1, -127]:
                     print 'Successfully terminated'
@@ -230,9 +242,9 @@ def automateDis(
     print '\nAll done'
 
 if __name__ == '__main__':
-    #wiki.login('darkid')
+    wiki.login('darkid')
     starttime = time()
-    
+
     # Poot values here
     automateDis(key = 'models.workshop.weapons.c_models.c_atom_launcher.c_atom_launcher.mdl',
                 numberOfImages = 24,
@@ -248,6 +260,6 @@ if __name__ == '__main__':
                 itemName = 'User Darkid Test',
                 #REDVMTFiles = [r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler.vmt', r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_laser.vmt'],
                 #BLUVMTFiles = [r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_blue.vmt', r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_laser_blue.vmt'],
-                )
+               )
 
     print 'completed in', int(time() - starttime), 'seconds'
