@@ -1,313 +1,265 @@
-import mouse, Image, ImageGrab, os, subprocess, math, imgpie, threading
+"""
+The base automation file. Deals with opening HLMV, and the interaction between
+the model (HLMVModel.py) and the image processing (imageprocessor.py)
+"""
+
+from hashlib import md5
+from os import makedirs, sep
 from subprocess import Popen, PIPE
-from HLMVModel import *
+from time import time, sleep
+from threading import Thread
+
+from PIL.ImageGrab import grab
 from SendKeys import SendKeys
-from Stitch import *
+from wikitools import wiki
+from wikitools.wikifile import File
+from wikitools.page import Page
+from win32api import GetKeyState, mouse_event, SetCursorPos
+import win32con
+from win32gui import EnumWindows, GetWindowText, SetForegroundWindow, ShowWindow
+
+from imageprocessor import imageProcessor
+from HLMVModel import HLMVModelRegistryKey
+
 try:
-	import psyco
-	psyco.full()
-except:
-	pass
+    import psyco
+    psyco.full()
+except ImportError:
+    pass
 
-degreesToRadiansFactor = math.pi / 180.0
+global threads
+threads = [] # Used to track the threads used for blending
+wiki = wiki.Wiki('http://wiki.teamfortress.com/w/api.php')
 outputImagesDir = r'output' # The directory where the output images will be saved.
-targetImagesDir = r'targetimages' # The directory containing the target images for mouse clicking.
-finalImageName = r'outpoot.jpg' # The name of the final image.
-SDKLauncherStartingPoint = (20, 20) # Rough x, y screen coordindates of SDK Launcher. This is near the top left of the screen by default.
-monitorResolution = [1920, 1080] # The monitor resolution of the user in the form of a list; [pixel width, pixel height].
-imgCropBoundaries = (1, 42, 1919, 799) # The cropping boundaries, as a pixel distance from the top left corner, for the images as a tuple; (left boundary, top boundary, right boundary, bottom boundary).
+# The cropping boundaries, as a pixel
+# distance from the top left corner, for the images as a tuple:
+# (left boundary, top boundary, right boundary, bottom boundary).
+imgCropBoundaries = (1, 42, 1279, 510)
 fileButtonCoordindates = (14, 32) # The coordinates for the File menu button in HLMV
+#sleepFactor = 1.0 # Multiplicitive factor for script wait times
 
-paintDict = {'Stock': 'Stock',
-			 'An Extraordinary Abundance of Tinge': '230 230 230',
-			 'Color No. 216-190-216': '216 190 216',
-			 'Peculiarly Drab Tincture': '197 175 145',
-			 'Aged Moustache Grey': '126 126 126',
-			 'A Distinctive Lack of Hue': '20 20 20',
-			 'Radigan Conagher Brown': '105 77 58',
-			 'Ye Olde Rustic Color': '124 108 87',
-			 'Muskelmannbraun': '165 117 69',
-			 'Australium Gold': '231 181 59',
-			 'The Color of a Gentlemann\'s Business Pants': '240 230 140',
-			 'Dark Salmon Injustice': '233 150 122',
-			 'Mann Co. Orange': '207 115 54',
-			 'Pink as Hell': '255 105 180',
-			 'A Deep Commitment to Purple': '125 64 113',
-			 'Noble Hatter\'s Violet': '81 56 74',
-			 'A Color Similar to Slate': '47 79 79',
-			 'The Bitter Taste of Defeat and Lime': '50 205 50',
-			 'Indubitably Green': '114 158 66',
-			 'Drably Olive': '128 128 0',
-			 'Zephaniah\'s Greed': '66 79 59',
-			 'Waterlogged Lab Coat (RED)': '168 154 140',
-			 'Balaclavas Are Forever (RED)': '59 31 35',
-			 'Team Spirit (RED)': '184 56 59',
-			 'Operator\'s Overalls (RED)': '72 56 56',
-			 'The Value of Teamwork (RED)': '128 48 32',
-			 'An Air of Debonair (RED)': '101 71 64',
-			 'Cream Spirit (RED)': '195 108 45'
-			 }
+def uploadFile(outputFolder, title):
+    """
+    Uploads the files in outputFolder to the wiki as title
+    """
+    if not wiki.isLoggedIn():
+        return
+    hash = md5(title.replace(' ', '_')).hexdigest()
+    url = 'http://wiki.teamfortress.com/w/images/%s/%s/%s' % (hash[:1], hash[:2], title.replace(' ', '_'))
+    file = open('%s\\%s' % (outputFolder, title), 'rb')
+    description = open('%s\\%s offsetmap.txt' % (outputFolder, title), 'rb').read()
+    description = description.replace('url = <nowiki></nowiki>', 'url = <nowiki>' + url + '</nowiki>')
 
-BLUPaintDict = {'Stock (BLU)': 'Stock',
-				'Waterlogged Lab Coat (BLU)': '131 159 163',
-				'Balaclavas Are Forever (BLU)': '24 35 61',
-				'Team Spirit (BLU)': '88 133 162',
-				'Operator\'s Overalls (BLU)': '56 66 72',
-				'The Value of Teamwork (BLU)': '37 109 141',
-				'An Air of Debonair (BLU)': '40 57 77',
-				'Cream Spirit (BLU)': '184 128 53'
-				}
+    print 'Uploading', title, '...'
+    target = File(wiki, title)
+    if target.exists:
+        answer = raw_input('File already exists, ovewrite? y\\n? ')
+        ignorewarnings = answer.lower() in ['yes', 'y']
+        res = target.upload(file, ignorewarnings=ignorewarnings)
+        if res['upload']['result'] == 'Warning':
+            print 'Failed for file:', title
+            print res['upload']['warnings']
+        else:
+            Page(wiki, 'File:'+title).edit(text=description, redirect=False)
+    else:
+        res = target.upload(file, comment=description)
+        if res['upload']['result'] == 'Warning':
+            print 'Failed for file: ', title
+            print res['upload']['warnings']
 
-def paintHat(colour, VMTFile):
-	vmt = open(VMTFile, 'rb').read()
-	pattern = '"\$color2" "\{(.[^\}]+)\}"'
-	regex = re.compile(pattern, re.IGNORECASE)
-	if regex.search(vmt):
-		if colour == 'Stock':
-			pattern2 = '(\s*)"\$colortint_base" "\{(.[^\}]+)\}"'
-			regex = re.compile(pattern2, re.IGNORECASE)
-			result = regex.search(vmt)
-			vmt = re.sub(pattern, '"$color2" "{' + result.group(2) + '}"', vmt)
-		else:
-			vmt = re.sub(pattern, '"$color2" "{' + colour + '}"', vmt)
-	else:
-		pattern = '(\s*)"\$colortint_base" "\{(.[^\}]+)\}"'
-		regex = re.compile(pattern, re.IGNORECASE)
-		result = regex.search(vmt)
-		if colour == 'Stock':
-			vmt = re.sub(pattern, result.group(1) + '"$colortint_base" "{' + result.group(2) + '}"\n' + result.group(1).replace('\r\n','') + '"$color2" "{' + result.group(2) + '}"', vmt)
-		else:
-			vmt = re.sub(pattern, result.group(1) + '"$colortint_base" "{' + result.group(2) + '}"\n' + result.group(1).replace('\r\n','') + '"$color2" "{' + colour + '}"', vmt)
-	f = open(VMTFile, 'wb')
-	f.write(vmt)
-	f.close()
+def automateDis(
+        key,
+        numberOfImages=24,
+        n=0,
+        rotationOffset=None,
+        initialRotation=None,
+        initialTranslation=None,
+        verticalOffset=None,
+        verticalRotations=1,
+        screenshotPause=False,
+        teamColours=False,
+        pathToHlmv='',
+        itemName='',
+        REDVMTFiles=None,
+        BLUVMTFiles=None):
+    """
+    Method to automize process of taking images for 3D model views.
 
-def getBrightness(p):
-	return (299.0 * p[0] + 587.0 * p[1] + 114.0 * p[2]) / 1000.0
+    Parameters:
+        key -> (REQUIRED) The registry key for the model
+        numberOfImages -> Number of images to take per one full rotation.
+        n -> Offset the rotation from this image number.
+        rotationOffset -> Offset the center of rotation horizontally
+        verticalOffset -> Offset the center of rotation vertically
+        verticalRotations -> Set to 0 to disable vertical rotations.
+        screenshotPause -> Pause on each screenshot. NUMLOCK will continue.
+        pathToHlmv -> Path to hlmv.exe. Usually in common\\Team Fortress 2\\bin
+        itemName -> The name of the item, as will be saved to disk and uploaded
+        REDVMTFiles -> A list of RED vmt file locations.
+        BLUVMTFiles -> A list of BLU vmt file locations.
+    """
 
-def toAlphaBlackWhite(blackImg, whiteImg):
-	size = blackImg.size
-	blackImg = blackImg.convert('RGBA')
-	loadedBlack = blackImg.load()
-	loadedWhite = whiteImg.load()
-	for x in range(size[0]):
-		for y in range(size[1]):
-			blackPixel = loadedBlack[x, y]
-			whitePixel = loadedWhite[x, y]
-			loadedBlack[x, y] = (
-				(blackPixel[0] + whitePixel[0]) / 2,
-				(blackPixel[1] + whitePixel[1]) / 2,
-				(blackPixel[2] + whitePixel[2]) / 2,
-				int(255.0 - 255.0 * (getBrightness(whitePixel) - getBrightness(blackPixel)))
-			)
-	return blackImg
+    outputFolder = outputImagesDir + sep + itemName
+    try:
+        makedirs(outputFolder)
+    except WindowsError:
+        answer = raw_input('Folder "%s" already exists, overwrite files? (y\\n) ' % itemName)
+        if answer.lower() in ['no', 'n']:
+            import sys
+            sys.exit(1)
 
-def rotateAboutNewCentre(currentXPosition, currentYPosition, currentZPosition, rotationOffset, yangle, xangle):
-	""" Method to position a model in HLMV with a new center of rotation.
-	
-		Parameters:
-                currentXPosition -> The current x position of the model.
-				currentYPosition -> The current y position of the model.
-				currentZPosition -> The current z position of the model.
-				rotationOffset -> The distance from the default centre of rotation to the new one (in HLMV units).
-				yangle -> The angle the model has been rotated by around the y axis.
-				xangle -> The angle the model has been rotated by around the x axis.
-	"""
-	yangle = float(yangle)
-	xangle = float(xangle)
-	rotationOffset = float(rotationOffset)
-	if yangle < 0.0:
-		yangle = 360.0 - abs(yangle) # Funky HLMV coordinate system
-	newX = (math.cos(yangle * degreesToRadiansFactor) * rotationOffset) + float(currentXPosition)
-	newY = (math.sin(yangle * degreesToRadiansFactor) * rotationOffset) + float(currentYPosition)
-	newZ = float(currentZPosition) - (math.sin(xangle * degreesToRadiansFactor) * rotationOffset)
-	return [newX, newY, newZ]
+    # Time for user to cancel script start
+    sleep(3)
 
-def offsetVertically(currentXPosition, currentYPosition, currentZPosition, verticalOffset, yangle, xangle):
-	yangle = float(yangle)
-	verticalOffset = float(verticalOffset)
-	if yangle < 0.0:
-		yangle = 360.0 - abs(yangle) # Funky HLMV coordinate system
-	newX = ((math.sin(xangle * degreesToRadiansFactor)) * (math.sin(yangle * degreesToRadiansFactor)) * verticalOffset) + float(currentXPosition)
-	newY = ((math.sin(yangle * degreesToRadiansFactor)) * (math.sin(xangle * degreesToRadiansFactor)) * verticalOffset) + float(currentYPosition)
-	newZ = currentZPosition
-	return [newX, newY, newZ]
+    # Close HLMV, in case it's already open. Suppress all responses.
+    model = HLMVModelRegistryKey(key, rotation=initialRotation, translation=initialTranslation)
 
-class BlendingThread(threading.Thread):
-	allThreads = []
-	def __init__(self, xrotation, n, blackImages, whiteImages, saveDir):
-		self.xrotation = xrotation
-		self.n = n
-		self.blackImages = blackImages
-		self.whiteImages = whiteImages
-		self.saveDir = saveDir
-		threading.Thread.__init__(self)
-		BlendingThread.allThreads.append(self)
-		self.start()
-	def run(self):
-		for colour in self.whiteImages:
-			print 'Processing ' + colour
-			if self.xrotation == -15:
-				imgname = str(self.n) + 'up' + colour + '.png'
-			elif self.xrotation == 15:
-				imgname = str(self.n) + 'down' + colour + '.png'
-			else:
-				imgname = str(self.n) + '' + colour + '.png'
-			black = imgpie.wrap(self.blackImages[colour])
-			white = imgpie.wrap(self.whiteImages[colour])
-			blended = black.blackWhiteBlend(white)
-			blended.save(self.saveDir + os.sep + imgname)
-	def waitForAll():
-		for t in BlendingThread.allThreads:
-			t.join()
-	
-def automateDis(model, numberOfImages=24, n=0, rotationOffset=None, initialRotation=None, initialTranslation=None, verticalOffset=None, disableXRotation=False, REDVMTFile=None, BLUVMTFile=None):
-	""" Method to automize process of taking images for 3D model views. 
-	
-		Parameters:
-                model -> An instance of a HLMVModelRegistryKey object for the model. Required.
-				numberOfImages -> Number of images to take for one full rotation. Optional, default is 24.
-				n -> Which nth step of rotation to start at. Optional, default is 0.
-				rotationOffset -> The distance from the default centre of rotation to the new one (in HLMV units). Optional, default is none.
-				initialRotation -> The initial model rotation as a tuple. Optional, default is (0 0 0).
-				initialTranslation -> The initial model translation as a tuple. Optional, default is (0 0 0).
-				verticalOffset -> The vertical offset for models that are centered in both other planes but not vertically. Optional, default is none.
-				disableXRotation -> Boolean that disables tilting. Default is False.
-	"""
-	
-	folder = raw_input('Folder name for created images: ')
-	outputFolder = outputImagesDir + os.sep + folder
-	try:
-		os.mkdir(outputFolder)
-	except:
-		answer = raw_input('Folder already exists, overwrite files? y\\n? ')
-		if answer == 'yes' or answer == 'y':
-			pass
-		elif answer == 'no' or answer == 'n':
-			sys.exit(1)
-	
-	if initialTranslation is None:
-		initialTranslation = [model.returnTranslation()['x'], model.returnTranslation()['y'], model.returnTranslation()['z']]
-	if initialRotation is None:
-		initialRotation = [model.returnRotation()['x'], model.returnRotation()['y'], model.returnRotation()['z']]
-	
-	# Time for user to cancel script start
-	mouse.sleep(3)
-	
-	try:
-		subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
-		mouse.sleep(2)
-	except:
-		pass
-	print 'initialTranslation =', initialTranslation
-	print 'initialRotation =', initialRotation
-	model.setTranslation(x = initialTranslation[0], y = initialTranslation[1], z = initialTranslation[2])
-	model.setNormalMapping(True)
-	SDKLauncherCoords = None
-	
-	whiteBackgroundImages = {}
-	blackBackgroundImages = {}
-	
-	for yrotation in range((-180 + (360/24 * n)), 180, 360/numberOfImages):
-		print 'n =', str(n)
-		for xrotation in range(-15, 30, 15):
-			if (disableXRotation and xrotation == 0) or not disableXRotation:
-				# Set rotation
-				mouse.sleep(0.5)
-				model.setRotation(x = xrotation + float(initialRotation[0]), y = yrotation + float(initialRotation[1]), z = initialRotation[2])
-				print 'xRot = %s, yRot = %s' % (xrotation, yrotation)
-				if rotationOffset is not None:
-					# Set translation to account for off centre rotation
-					result = rotateAboutNewCentre(initialTranslation[0], initialTranslation[1], initialTranslation[2], rotationOffset, yrotation, xrotation)
-					print 'translation =', result
-					model.setTranslation(x = result[0], y = result[1], z = result[2])
-					# Set translation to account for off centre horizontal rotation
-				elif verticalOffset is not None:
-					result = offsetVertically(initialTranslation[0], initialTranslation[1], initialTranslation[2], verticalOffset, yrotation, xrotation)
-					print 'translation =', result
-					model.setTranslation(x = result[0], y = result[1], z = result[2])
-				# Set white colour
-				model.setBGColour(255, 255, 255, 255)
-				# Open HLMV
-				mouse.sleep(1)
-				if SDKLauncherCoords is None:
-					SDKLauncherCoords = mouse.find({targetImagesDir + os.sep + 'openhlmv.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
-					if SDKLauncherCoords is None:
-						SDKLauncherCoords = mouse.find({targetImagesDir + os.sep + 'openhlmvunhighlighted.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
-					if SDKLauncherCoords is None:
-						SDKLauncherCoords = mouse.find({targetImagesDir + os.sep + 'openhlmvinactive.png': (0, 0)}, startingPoint=SDKLauncherStartingPoint)
-					if SDKLauncherCoords is None:
-						print 'Couldn\'t find source SDK launcher to click on'
-						break
-				mouse.doubleclick(SDKLauncherCoords)
-				# Maximise HLMV
-				mouse.sleep(2)
-				SendKeys("""*{UP}""")
-				# Open recent model
-				mouse.click(x=fileButtonCoordindates[0],y=fileButtonCoordindates[1])
-				SendKeys("""{DOWN 8}{RIGHT}{ENTER}""")
-				# Take whiteBG screenshots and crop
-				mouse.sleep(2)
-				def paintcycle(dict):
-					for colour in dict:
-						paintHat(dict[colour], REDVMTFile)
-						SendKeys("""{F5}""")
-						mouse.sleep(0.1)
-						imgWhiteBG = ImageGrab.grab()
-						imgWhiteBG = imgWhiteBG.crop(imgCropBoundaries)
-						whiteBackgroundImages[colour] = imgWhiteBG
-					# Change BG colour to black
-					SendKeys("""^b""")
-					# Take blackBG screenshots and crop
-					for colour in dict:
-						paintHat(dict[colour], REDVMTFile)
-						SendKeys("""{F5}""")
-						mouse.sleep(0.1)
-						imgBlackBG = ImageGrab.grab()
-						imgBlackBG = imgBlackBG.crop(imgCropBoundaries)
-						blackBackgroundImages[colour] = imgBlackBG
-					SendKeys("""^b""")
-				paintcycle(paintDict)
-				# Change RED hat to BLU
-				redVMTContents = open(REDVMTFile, 'rb').read()
-				bluVMTContents = open(BLUVMTFile, 'rb').read()
-				f = open(REDVMTFile, 'wb')
-				f.write(bluVMTContents)
-				f.close()
-				paintcycle(BLUPaintDict)
-				g = open(REDVMTFile, 'wb')
-				g.write(redVMTContents)
-				g.close()
-				# Remove background from images
-				"""for colour in whiteBackgroundImages:
-					print 'processing ' + colour
-					img = toAlphaBlackWhite(blackBackgroundImages[colour], whiteBackgroundImages[colour])
-					# Save screenshot
-					if xrotation == -15:
-						imgname = str(n) + 'up' + colour + '.png'
-					elif xrotation == 15:
-						imgname = str(n) + 'down' + colour + '.png'
-					else:
-						imgname = str(n) + '' + colour + '.png'
-					img.save(outputFolder + os.sep + imgname, "PNG")"""
-				BlendingThread(xrotation, n, blackBackgroundImages, whiteBackgroundImages, outputFolder)
-				# Close HLMV
-				subprocess.Popen(['taskkill', '/f', '/t' ,'/im', 'hlmv.exe'], stdout=PIPE, stderr=PIPE)
-		n += 1
-	BlendingThread.waitForAll()
-	# Stitch images together
-	print 'Stitching images together...'
-	stitch(outputFolder, finalImageName)
-	# All done yay
-	print '\nAll done'
+    Popen(['taskkill', '/f', '/t', '/im', 'hlmv.exe'], stderr=PIPE, stdout=PIPE)
+    sleep(2.0)
+    print 'initialTranslation =', initialTranslation
+    print 'initialRotation =', initialRotation
 
-# Poot values here
-model = HLMVModelRegistryKey('models.weapons.c_models.c_rift_fire_axe.c_rift_fire_axe.mdl')
-automateDis(model=model,
-			n=0,
-			rotationOffset=None,
-			verticalOffset=None,
-			disableXRotation=False,
-			initialRotation=(0.000000, 0.000000, 0.000000),
-			initialTranslation=(107.167007, 0.000000, 2.749039)
-			)
+    # Adjust model rotation as needed
+    if rotationOffset:
+        model.rot_offset = rotationOffset
+    if verticalOffset:
+        model.vert_offset = verticalOffset
+
+    # Create the image processors, used for blending, cropping, and stitching
+    if teamColours:
+        ipRed = imageProcessor(suffix='RED')
+        ipBlu = imageProcessor(suffix='BLU')
+    else:
+        ip = imageProcessor()
+
+    for y in range(n, numberOfImages):
+        yrotation = (360/numberOfImages)*y
+        print 'n =', n
+        for xrotation in range(15, -30, -15):
+            if (verticalRotations == 0 and xrotation == 0) or verticalRotations == 1:
+                # Set rotation
+                sleep(0.5)
+                model.rotate(xrotation, yrotation)
+                # Open HLMV
+                Popen([pathToHlmv + sep + 'hlmv.exe', '-game', pathToHlmv[:-4]+'\\tf\\'])
+                sleep(2)
+                # Focus and maximise HLMV
+                def enum_callback(hwnd, _):
+                    if GetWindowText(hwnd)[:22] == 'Half-Life Model Viewer':
+                        SetForegroundWindow(hwnd)
+                        ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+                EnumWindows(enum_callback, [])
+                # Open most recent model
+                x, y = fileButtonCoordindates
+                SetCursorPos((x, y))
+                mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, x, y, 0, 0)
+                mouse_event(win32con.MOUSEEVENTF_LEFTUP, x, y, 0, 0)
+                SendKeys(r'{UP 2}{RIGHT}{ENTER}')
+                sleep(1)
+                # If user wants to pose model before taking screenshot, make script wait
+                if screenshotPause:
+                    numKeyState = GetKeyState(win32con.VK_NUMLOCK)
+                    while GetKeyState(win32con.VK_NUMLOCK) == numKeyState:
+                        pass
+
+                global threads
+                if teamColours:
+                    # Take two (red) images, on one black and one on white,
+                    # and blends them together to find transparency
+                    imgWhiteBG = grab().crop(imgCropBoundaries)
+                    SendKeys(r'^b')
+                    imgBlackBG = grab().crop(imgCropBoundaries)
+                    SendKeys(r'^b')
+                    thread = Thread(target=ipRed.blend, kwargs={
+                        'blackImg': imgBlackBG,
+                        'whiteImg': imgWhiteBG,
+                        'name': '%s\\%d_%d_RED.png' % (outputFolder, n, xrotation / -15)
+                    })
+                    threads.append(thread)
+                    thread.start()
+
+                    # Swap the red and blue .vmts to change the weapon's colour
+                    redFiles = [open(f, 'rb').read() for f in REDVMTFiles]
+                    for bluFileName, redFileName in zip(BLUVMTFiles, REDVMTFiles):
+                        with open(redFileName, 'wb') as redFile, open(bluFileName, 'rb') as bluFile:
+                            redFile.write(bluFile.read())
+                    SendKeys(r'{F5}')
+                    sleep(1.0)
+
+                    # Take two (blue) images and blend them together
+                    imgWhiteBG = grab().crop(imgCropBoundaries)
+                    SendKeys(r'^b')
+                    imgBlackBG = grab().crop(imgCropBoundaries)
+                    SendKeys(r'^b')
+                    thread = Thread(target=ipBlu.blend, kwargs={
+                        'blackImg': imgBlackBG,
+                        'whiteImg': imgWhiteBG,
+                        'name': '%s\\%d_%d_BLU.png' % (outputFolder, n, xrotation / -15)
+                    })
+                    threads.append(thread)
+                    thread.start()
+
+                    # Swap the item back to red
+                    for redFileName, redFileContents in zip(REDVMTFiles, redFiles):
+                        with open(redFileName, 'wb') as redFile:
+                            redFile.write(redFileContents)
+                else:
+                    # Take two images, on one black and one on white, blend them together to find transparency
+                    imgWhiteBG = grab().crop(imgCropBoundaries)
+                    SendKeys(r'^b')
+                    imgBlackBG = grab().crop(imgCropBoundaries)
+                    SendKeys(r'^b')
+                    thread = Thread(target=ip.blend, kwargs={
+                        'blackImg': imgBlackBG,
+                        'whiteImg': imgWhiteBG,
+                        'name': '%s\\%d_%d.png' % (outputFolder, n, xrotation / -15)
+                    })
+                    threads.append(thread)
+                    thread.start()
+                # Close HLMV, supress success message
+                Popen(['taskkill', '/f', '/t', '/im', 'hlmv.exe'], stdout=PIPE)
+                # Check for kill switch
+                if GetKeyState(win32con.VK_CAPITAL) in [1, -127]:
+                    print 'Successfully terminated'
+                    import sys
+                    sys.exit(0)
+        n += 1
+    for thread in threads:
+        thread.join() # Wait for threads to finish, if any
+    print 'Stitching images together...'
+    if teamColours:
+        ipRed.stitch(outputFolder + sep + itemName + ' RED 3D.jpg', n, verticalRotations)
+        ipBlu.stitch(outputFolder + sep + itemName + ' BLU 3D.jpg', n, verticalRotations)
+    else:
+        ip.stitch(outputFolder + sep + itemName + ' 3D.jpg', n, verticalRotations)
+    # Upload images to wiki
+    if teamColours:
+        uploadFile(outputFolder, itemName + ' RED 3D.jpg')
+        uploadFile(outputFolder, itemName + ' BLU 3D.jpg')
+    else:
+        uploadFile(outputFolder, itemName + ' 3D.jpg')
+    # All done yay
+    print '\nAll done'
+
+if __name__ == '__main__':
+    wiki.login('darkid')
+    starttime = time()
+
+    # Poot values here
+    automateDis(key = 'models.workshop.weapons.c_models.c_atom_launcher.c_atom_launcher.mdl',
+                numberOfImages = 24,
+                n = 0,
+                rotationOffset = -6,
+                verticalOffset = None,
+                initialRotation = (0.000000, 0.000000, 0.000000),
+                initialTranslation = (79.149429, 0.000000, 1.789900),
+                verticalRotations = 0,
+                screenshotPause = False,
+                teamColours = False,
+                pathToHlmv = r'F:\Steam\steamapps\common\Team Fortress 2\bin',
+                itemName = 'User Darkid Test',
+                #REDVMTFiles = [r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler.vmt', r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_laser.vmt'],
+                #BLUVMTFiles = [r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_blue.vmt', r'F:\Steam\steamapps\common\Team Fortress 2\tf\custom\MatOverrides\materials\models\workshop\weapons\c_models\c_invasion_wrangler\c_invasion_wrangler_laser_blue.vmt'],
+               )
+
+    print 'completed in', int(time() - starttime), 'seconds'
